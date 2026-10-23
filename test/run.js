@@ -745,6 +745,23 @@ await t('config.json et state.json repris, secrets rescellés, auto-signé épin
   } finally { await v1.arreter(); }
 });
 
+await t('une rafale reçoit 429, avec les en-têtes de sécurité', async () => {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'cachet-rafale-'));
+  const r = await demarrer({ CACHET_DATA: d, PORT: '0', HOTE: '127.0.0.1', SOCLE_HTTP: '1', SOCLE_ARGON2_M: '19456', SOCLE_ARGON2_T: '2', SOCLE_ARGON2_P: '1' }, { log: muet });
+  try {
+    const url = `http://127.0.0.1:${r.serveur.address().port}/api/health`;
+    let refus = null;
+    for (let lot = 0; lot < 20 && !refus; lot++) {
+      const reponses = await Promise.all(Array.from({ length: 50 }, () => fetch(url)));
+      refus = reponses.find(x => x.status === 429) || null;
+      await Promise.all(reponses.map(x => x.arrayBuffer()));
+    }
+    assert.ok(refus, 'aucun 429 après mille requêtes');
+    assert.match(refus.headers.get('content-security-policy') || '', /default-src 'none'|script-src/);
+    assert.equal(refus.headers.get('x-content-type-options'), 'nosniff');
+  } finally { await r.arreter(); }
+});
+
 console.log(`\n${pass} réussis, ${fail} échoués\n`);
 await app.arreter();
 for (const s of [imapSrv, imapAutre, imapStart, imapClair]) s.close();
