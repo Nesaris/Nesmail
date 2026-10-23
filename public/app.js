@@ -137,7 +137,7 @@ function aller(page, bouton) {
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('on', p.id === 'p-' + page));
   // Les pages des comptes viennent du socle : construites à l'ouverture, à jour.
   if (page === 'comptes') $('p-comptes').replaceChildren(pageComptes(socle, { service: 'CACHET' }));
-  if (page === 'securite') $('p-securite').replaceChildren(pageSecurite(socle, { service: 'CACHET' }));
+  if (page === 'securite') $('p-securite').replaceChildren(pageSecurite(socle, { service: 'CACHET', confidentialite: '/confidentialite.txt' }));
   window.scrollTo(0, 0);
 }
 document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => aller(b.dataset.go, b)));
