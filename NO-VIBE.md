@@ -52,6 +52,8 @@ Diff de l’API publique entre la 1.0 et la 2.0 : les routes de données sont le
 
 Démarrage et parcours de bout en bout sur l’arbre final : `outils/parcours-navigateur.mjs` (installation par clé d’accès virtuelle, boîte relevée sur un serveur IMAP d’essai, chaque écran dans les quatre gammes, clair et sombre, de 360 à 1920 pixels, feuilles de boîte, de ticket, de réponse et de règle, menu contextuel, sonde d’injection dans chaque champ affiché) → 504 contrôles, 0 défaut, 0 erreur de console.
 
+Suivi 2.0.1 (2026-10-23) : retour d’« Envoyés » à « Courrier », espacement et alignement des cartes. Comportement changé voulu : la page Courrier revient à toutes les boîtes quand on la rouvre depuis la navigation. Le contrôle de mise en page du socle (00b4857) relève maintenant les cartes collées et les rangées désalignées ; parcours navigateur : 504 contrôles, 0 défaut, retour à Courrier vérifié.
+
 ## Layer status
 | Chapter | Subject | Status | What changed |
 |---|---|---|---|
