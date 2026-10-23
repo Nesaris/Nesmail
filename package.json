@@ -1,0 +1,11 @@
+{
+  "name": "cachet",
+  "version": "1.0.0",
+  "description": "Boîte d'arrivée des alertes et suivi des tickets, sans dépendances",
+  "main": "server.js",
+  "scripts": { "start": "node server.js", "test": "node test/run.js" },
+  "engines": { "node": ">=20" },
+  "author": "CodexX64",
+  "license": "MIT",
+  "private": true
+}

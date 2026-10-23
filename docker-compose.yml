@@ -1,0 +1,30 @@
+services:
+  cachet:
+    build: .
+    image: cachet:1.0.0
+    container_name: cachet
+    restart: unless-stopped
+
+    # Adresse et port definis une seule fois, dans le .env.
+    #   127.0.0.1 = accessible seulement depuis l'hote (tunnel SSH ou proxy local)
+    #   0.0.0.0   = accessible depuis le reseau
+    # Le port interne du conteneur reste 8787.
+    ports:
+      - "${CACHET_BIND:-127.0.0.1}:${CACHET_PORT:-8787}:8787"
+
+    environment:
+      CACHET_SECRET: ${CACHET_SECRET:?generez-en un avec  openssl rand -hex 32}
+      CACHET_PASSWORD: ${CACHET_PASSWORD:-}
+      CACHET_TOTP_SECRET: ${CACHET_TOTP_SECRET:-}
+      CACHET_INSECURE_COOKIE: ${CACHET_INSECURE_COOKIE:-}
+
+    # Volume nomme : Docker regle les droits tout seul pour l'uid 10001.
+    volumes:
+      - cachet-data:/data
+
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+volumes:
+  cachet-data:
