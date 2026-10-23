@@ -612,7 +612,7 @@ await t('le webhook part signé, avec l\'en-tête demandé', async () => {
   const r = await admin.patch('/api/settings', { webhook: { enabled: true, url: `http://127.0.0.1:${srv.address().port}/hook`, key: 'cle-tierce', keyHeader: 'x-service-key', secret: 'hmac-partage' } });
   assert.equal(r.status, 200, JSON.stringify(r.json));
   await admin.post('/api/tickets', { subject: 'Essai webhook', service: 'Cachet', urgency: 'haute' });
-  await new Promise(res => setTimeout(res, 300));
+  await new Promise(fin => setTimeout(fin, 300));
   assert.equal(recus.length, 1, 'aucun appel reçu');
   assert.equal(recus[0].corps.event, 'ticket.created');
   assert.equal(recus[0].entetes['x-service-key'], 'cle-tierce');

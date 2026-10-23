@@ -562,7 +562,7 @@ function menuCompte(e, a) {
         } catch (err) { toast(err.message); }
         await refresh();
       } },
-    { label: 'Relever maintenant', icon: ICON.route, action: () => doPoll() },
+    { label: 'Relever maintenant', icon: ICON.route, action: () => relever() },
     { label: 'Relever depuis zéro', action: async () => {
         if (!await confirmer('Relever depuis zéro ?', 'Les 20 derniers messages sont repris, lus ou non.')) return;
         const r = await api('POST', `/api/accounts/${a.id}/rescan`);
@@ -707,8 +707,8 @@ function corpsRegle() {
 
 async function essaiRegle(r) {
   try {
-    const res = await api('POST', '/api/rules/essai', { rule: r || corpsRegle() });
-    toast(`${res.touches} message(s) touché(s) sur ${res.examines} examinés`);
+    const bilan = await api('POST', '/api/rules/essai', { rule: r || corpsRegle() });
+    toast(`${bilan.touches} message(s) touché(s) sur ${bilan.examines} examinés`);
   } catch (e) { toast(e.message); }
 }
 $('rEssai').onclick = () => essaiRegle();
@@ -1072,7 +1072,7 @@ $('testHook').onclick = async () => {
   b.textContent = 'Envoyer un essai'; await refresh();
 };
 
-async function doPoll() {
+async function relever() {
   try {
     const r = await api('POST', '/api/poll');
     if (r.error) toast(`Relève partielle : ${r.error}`);
@@ -1081,8 +1081,8 @@ async function doPoll() {
   } catch (e) { toast(e.message); }
   await refresh();
 }
-$('pollNow').onclick = () => doPoll();
-$('pollNow2').onclick = () => doPoll();
+$('pollNow').onclick = () => relever();
+$('pollNow2').onclick = () => relever();
 
 async function refresh() {
   try {
