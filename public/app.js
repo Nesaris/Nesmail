@@ -992,6 +992,11 @@ function renderPrefs() {
   $('tgChat').value = t.chatId || '';
   $('tgMin').value = t.minUrgency || 'haute';
   $('apiOrigins').value = (s.api?.origins || []).join('\n');
+  const cles = s.api?.cles || {};
+  $('apiKey').value = cles.complete ? 'posée · pk_…' : 'aucune';
+  $('apiSendKey').value = cles.envoi ? 'posée · sk_…' : 'aucune';
+  if ($('apiRotate')) $('apiRotate').textContent = cles.complete ? 'Régénérer la clé complète' : 'Créer la clé complète';
+  if ($('apiRotateSend')) $('apiRotateSend').textContent = cles.envoi ? 'Régénérer la clé d’envoi' : 'Créer la clé d’envoi';
   const w = s.webhook || {};
   $('hookOn').classList.toggle('on', Boolean(w.enabled));
   $('hookUrl').value = w.url || '';
@@ -1022,30 +1027,26 @@ $('saveApi').onclick = async () => {
   await api('PATCH', '/api/settings', { api: { origins: origines } });
   toast('Origines enregistrées'); await refresh();
 };
-$('apiReveal').onclick = async () => {
+// Une clé neuve ne se montre qu'ici, une fois : CACHET n'en garde que l'empreinte.
+async function creerCle(envoi) {
+  const posee = S.settings?.api?.cles?.[envoi ? 'envoi' : 'complete'];
+  if (posee && !await confirmer(envoi ? 'Régénérer la clé d’envoi ?' : 'Régénérer la clé complète ?',
+    envoi ? 'Les services qui utilisent l’ancienne ne pourront plus envoyer.' : 'Les services qui utilisent l’ancienne perdront l’accès.', { danger: true, oui: 'Régénérer' })) return;
   try {
-    const r = await api('GET', '/api/apikey');
-    $('apiKey').value = r.key; $('apiSendKey').value = r.sendKey;
+    const r = await api('POST', '/api/apikey/rotate' + (envoi ? '?quoi=envoi' : ''));
+    const valeur = envoi ? r.sendKey : r.key;
+    const champ = h('input', { class: 'field mono', type: 'text', readonly: true, value: valeur, 'aria-label': 'Clé' });
+    await dialogue({
+      titre: envoi ? 'Clé d’envoi' : 'Clé complète',
+      texte: 'Copie-la maintenant : elle ne sera plus affichée. CACHET n’en garde que l’empreinte.',
+      contenu: [champ],
+      boutons: [{ texte: 'Copier', classe: 'solid', agir: () => { copier(valeur, 'Clé copiée'); return false; } }, { texte: 'J’ai copié la clé', classe: '', valeur: true }],
+    });
+    await refresh();
   } catch (e) { toast(e.message); }
-};
-$('apiCopy').onclick = async () => {
-  try { const r = await api('GET', '/api/apikey'); copier(r.key, 'Clé complète copiée'); }
-  catch (e) { toast(e.message); }
-};
-$('apiCopySend').onclick = async () => {
-  try { const r = await api('GET', '/api/apikey'); copier(r.sendKey, 'Clé d’envoi copiée'); }
-  catch (e) { toast(e.message); }
-};
-$('apiRotate').onclick = async () => {
-  if (!await confirmer('Régénérer la clé complète ?', 'Les services qui l’utilisent perdront l’accès.', { danger: true, oui: 'Régénérer' })) return;
-  const r = await api('POST', '/api/apikey/rotate');
-  $('apiKey').value = r.key; toast('Nouvelle clé générée');
-};
-$('apiRotateSend').onclick = async () => {
-  if (!await confirmer('Régénérer la clé d’envoi ?', 'Les services qui l’utilisent ne pourront plus envoyer.', { danger: true, oui: 'Régénérer' })) return;
-  const r = await api('POST', '/api/apikey/rotate?quoi=envoi');
-  $('apiSendKey').value = r.sendKey; toast('Nouvelle clé d’envoi générée');
-};
+}
+$('apiRotate').onclick = () => creerCle(false);
+$('apiRotateSend').onclick = () => creerCle(true);
 $('saveHook').onclick = async () => {
   await api('PATCH', '/api/settings', {
     webhook: {

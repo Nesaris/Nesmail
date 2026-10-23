@@ -11,7 +11,7 @@ import crypto from 'node:crypto';
 import { imapServer, makeMessage } from './mocks.js';
 import { certificatEssai, relaisEssai } from '../socle/essai/smtp.js';
 import { Client } from '../socle/essai/client.js';
-import { adminComplet, membreInvite, codeTotp, MDP_ESSAI } from '../socle/essai/inscription.js';
+import { adminComplet, membreInvite } from '../socle/essai/inscription.js';
 import * as mime from '../lib/mime.js';
 import * as html from '../lib/html.js';
 import * as tickets from '../lib/tickets.js';
@@ -294,7 +294,6 @@ let app = await demarrer({ CACHET_DATA: dossier, PORT: '0', HOTE: '127.0.0.1', S
 const port = () => app.serveur.address().port;
 const base = () => `http://127.0.0.1:${port()}`;
 const admin = new Client(port());
-let secretAdmin;
 const cle = (k, chemin, o = {}) => fetch(base() + chemin, { ...o, headers: { 'x-cachet-key': k, ...(o.body ? { 'content-type': 'application/json' } : {}), ...(o.headers || {}) } });
 
 await t('l\'API refuse sans session ; /api/health répond à tous', async () => {
@@ -304,7 +303,7 @@ await t('l\'API refuse sans session ; /api/health répond à tous', async () => 
   assert.deepEqual(await h.json(), { ok: true });
 });
 await t('premier compte par le jeton d\'installation, puis lecture de l\'état', async () => {
-  ({ secret: secretAdmin } = await adminComplet(admin, { jeton: JETON_INSTALL }));
+  await adminComplet(admin, { jeton: JETON_INSTALL });
   const s = await admin.get('/api/state');
   assert.equal(s.status, 200);
   assert.ok(Array.isArray(s.json.accounts));
@@ -506,17 +505,21 @@ await t('balayage : chaque route exige sa preuve et son rôle, déclarés comme 
 
 console.log('\n── clés, jeton du Hub, CORS, webhook ──');
 let cleComplete, cleEnvoi;
-await t('les clés ne se dévoilent qu\'après confirmation d\'identité', async () => {
-  const avant = await admin.get('/api/apikey');
-  assert.equal(avant.status, 403);
-  assert.equal(avant.json.details?.devoiler, true);
-  await new Promise(r => setTimeout(r, 1100));
-  const d = await admin.post('/api/compte/devoiler', { methode: 'motdepasse+totp', motDePasse: MDP_ESSAI, code: codeTotp(secretAdmin, Date.now(), 1) });
-  assert.equal(d.status, 200, JSON.stringify(d.json));
-  const r = await admin.get('/api/apikey');
-  assert.match(r.json.key, /^pk_/);
-  assert.match(r.json.sendKey, /^sk_/);
-  cleComplete = r.json.key; cleEnvoi = r.json.sendKey;
+await t('une clé d\'API se voit une fois, à sa création (renfort) ; seule son empreinte est gardée', async () => {
+  assert.deepEqual((await admin.get('/api/apikey')).json.cles, { complete: false, envoi: false }, 'aucune clé avant que l\'administrateur la crée');
+  await sansRenfort(async () => assert.equal((await admin.post('/api/apikey/rotate')).status, 403));
+  const r = await admin.post('/api/apikey/rotate');
+  const s = await admin.post('/api/apikey/rotate?quoi=envoi');
+  assert.match(r.json.key, /^pk_[A-Za-z0-9_-]{32}$/);
+  assert.match(s.json.sendKey, /^sk_[A-Za-z0-9_-]{32}$/);
+  cleComplete = r.json.key; cleEnvoi = s.json.sendKey;
+  const relue = await admin.get('/api/apikey');
+  assert.deepEqual(relue.json.cles, { complete: true, envoi: true });
+  assert.ok(!JSON.stringify(relue.json).includes(cleComplete) && !JSON.stringify((await admin.get('/api/state')).json).includes(cleComplete), 'la clé ressort de l\'API');
+  app.depot.flush();
+  const base = ['cachet.db', 'cachet.db-wal'].map(f => path.join(dossier, f)).filter(f => fs.existsSync(f)).map(f => fs.readFileSync(f).toString('latin1')).join('');
+  assert.ok(!base.includes(cleComplete) && !base.includes(cleEnvoi), 'une clé d\'API en clair dans la base');
+  assert.match(app.depot.config.settings.api.key, /^sha256:[0-9a-f]{64}$/);
 });
 await t('la clé complète traite le courrier sans cookie', async () => {
   assert.equal((await cle(cleComplete, '/api/state')).status, 200);
@@ -677,7 +680,7 @@ await t('les données survivent à un redémarrage', async () => {
 });
 await t('le journal de sécurité garde les gestes sensibles', async () => {
   const actions = app.db.prepare('SELECT action FROM socle_journal').all().map(l => l.action);
-  for (const a of ['boite.ajoutee', 'regle.creee', 'cle.devoilee', 'cle.tournee', 'reglages.modifies', 'courriel.envoye', 'connexion.cle']) assert.ok(actions.includes(a), `${a} absent`);
+  for (const a of ['boite.ajoutee', 'regle.creee', 'cle.tournee', 'reglages.modifies', 'courriel.envoye', 'connexion.cle']) assert.ok(actions.includes(a), `${a} absent`);
 });
 
 console.log('\n── reprise d\'une 1.0 ──');
@@ -696,7 +699,9 @@ await t('config.json et state.json repris, secrets rescellés, auto-signé épin
   try {
     const acc = v1.depot.config.accounts[0];
     assert.equal(v1.depot.motDePasse(acc), 'ancien-mdp');
-    assert.equal(v1.depot.cle('complete'), 'pk_ancienne', 'la clé d\'API a changé : Aselia perdrait l\'accès');
+    assert.equal(v1.depot.quelleCle('pk_ancienne'), 'complete', 'la clé d\'API a changé : Aselia perdrait l\'accès');
+    assert.equal(v1.depot.quelleCle('sk_ancienne'), 'envoi');
+    assert.match(v1.depot.config.settings.api.key, /^sha256:/, 'la clé reprise est gardée en clair');
     assert.equal(acc.imapPin, PREMIERE);
     assert.equal(acc.insecureTls, undefined);
     assert.equal(v1.depot.config.admin, undefined, 'le mot de passe unique de la 1.0 a survécu');

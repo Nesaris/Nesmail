@@ -129,9 +129,9 @@ elle aurait touchés, sans rien modifier.
 | membre | traiter : tickets, dossiers, relève, accusés de réception, envoi |
 | administrateur | régler : boîtes, règles, réglages, clés d'API, webhook, comptes |
 
-Supprimer une boîte, régénérer une clé, changer l'adresse du webhook ou le jeton
-Telegram demandent une confirmation récente de son identité ; lire une clé
-d'API aussi.
+Supprimer une boîte, changer où part son mot de passe, créer une clé d'API,
+changer l'adresse du webhook ou le jeton Telegram demandent une confirmation
+récente de son identité.
 
 ## Liaison avec un service externe
 
@@ -140,8 +140,10 @@ d'API aussi.
 - **la clé complète** (`pk_…`) lit et traite le courrier et les tickets, et envoie ;
 - **la clé d'envoi** (`sk_…`) n'ouvre que `POST /api/send`.
 
-Aucune clé n'ouvre les boîtes, les règles, les réglages ni les clés : cela
-demande une personne connectée. Les deux s'envoient en en-tête `X-Cachet-Key`
+Aucune clé n'existe tant qu'un administrateur ne l'a pas créée. Une clé se voit
+**une fois**, à sa création : CACHET n'en garde que l'empreinte. Perdue, elle se
+régénère (l'ancienne cesse aussitôt). Aucune clé n'ouvre les boîtes, les règles,
+les réglages ni les clés : cela demande une personne connectée. Les deux s'envoient en en-tête `X-Cachet-Key`
 ou en `Authorization: Bearer`. Le jeton de service du Hub vaut la clé complète.
 
 Les **origines autorisées** ne servent que si un front appelle CACHET depuis le
@@ -202,8 +204,9 @@ Arrêtez la 1.0, gardez son volume, et démarrez la 2.0 sur ce volume avec
 `CACHET_SECRET_V1` = l'ancien `CACHET_SECRET` (dans le Hub : réglages avancés,
 « CACHET_SECRET de la 1.0 »). Au premier démarrage, CACHET reprend les boîtes,
 les alias, les dossiers, les règles, les réglages, le courrier et les tickets ;
-les mots de passe des boîtes et les clés d'API (inchangées : vos services
-gardent l'accès) sont rescellés sous la clé maîtresse. `config.json` et
+les mots de passe des boîtes sont rescellés sous la clé maîtresse, et les clés
+d'API restent valables (vos services gardent l'accès) mais ne sont plus gardées
+que par leur empreinte. `config.json` et
 `state.json` sont renommés en `*.v1-reprise-<date>` : supprimez-les une fois la
 reprise vérifiée, puis videz `CACHET_SECRET_V1`.
 

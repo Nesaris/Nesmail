@@ -39,10 +39,11 @@ Tickets
   Durée : tant qu'il est ouvert, puis la rétention réglée après son traitement.
 
 Secrets des boîtes et des liaisons
-  - mots de passe IMAP/SMTP, clés d'API, clé et secret du webhook, jeton
-    Telegram, scellés au repos (AES-256-GCM, sous-clé par usage) ; empreinte du
-    certificat épinglé d'un serveur. Ils ne ressortent jamais de l'API, sauf les
-    clés d'API, dévoilées à un administrateur qui vient de confirmer son identité.
+  - mots de passe IMAP/SMTP, clé et secret du webhook, jeton Telegram, scellés
+    au repos (AES-256-GCM, sous-clé par usage) ; empreinte du certificat épinglé
+    d'un serveur. Ils ne ressortent jamais de l'API.
+  - clés d'API : leur empreinte seulement ; la valeur n'est montrée qu'une fois,
+    à l'administrateur qui la crée.
 
 Sauvegardes
   - l'exploitant peut tirer une copie de la base entière, chiffrée pour une clé
