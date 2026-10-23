@@ -20,6 +20,7 @@ import * as smtp from '../lib/smtp.js';
 import { Imap } from '../lib/imap.js';
 import { normaliserEmpreinte, PREMIERE } from '../lib/tls.js';
 import { signature } from '../lib/webhook.js';
+import { VERSION } from '../lib/config.js';
 
 let pass = 0, fail = 0;
 async function t(nom, fn) {
@@ -335,7 +336,7 @@ await t('premier compte par le jeton d\'installation, puis lecture de l\'état',
   const s = await admin.get('/api/state');
   assert.equal(s.status, 200);
   assert.ok(Array.isArray(s.json.accounts));
-  assert.equal(s.json.version, '2.0.0');
+  assert.equal(s.json.version, VERSION);
 });
 await t('une écriture sans jeton anti-CSRF est refusée', async () => {
   assert.equal((await admin.post('/api/folders', { name: 'X' }, { sansCsrf: true })).status, 403);
@@ -702,8 +703,8 @@ await t('/api et /api/ping répondent en JSON', async () => {
 await t('la page porte la version et la gamme, la CSP interdit le script en ligne', async () => {
   const r = await fetch(base() + '/');
   const page = await r.text();
-  assert.match(page, /src="\/app\.js\?v=2\.0\.0"/);
-  assert.match(page, /href="\/app\.css\?v=2\.0\.0"/);
+  assert.ok(page.includes(`src="/app.js?v=${VERSION}"`));
+  assert.ok(page.includes(`href="/app.css?v=${VERSION}"`));
   assert.match(page, /data-gamme="soma"/);
   assert.equal(r.headers.get('cache-control'), 'no-store');
   const csp = r.headers.get('content-security-policy');
