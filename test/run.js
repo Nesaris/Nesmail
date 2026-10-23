@@ -338,6 +338,25 @@ await t('champ inconnu, port hors bornes, hôte piégé : refusés', async () =>
   assert.equal((await admin.patch(`/api/accounts/${accId}`, { imapHost: 'a.fr\r\nX' })).status, 400);
   assert.equal((await admin.patch(`/api/accounts/${accId}`, { folder: 'INBOX"\r\nA1 DELETE' })).status, 400);
 });
+// Le renfort de l'administrateur retiré le temps d'un essai, puis rendu.
+async function sansRenfort(fn) {
+  const avant = app.db.prepare("SELECT id, renfort FROM socle_sessions WHERE compte = (SELECT id FROM socle_comptes WHERE identifiant = 'ana')").all();
+  app.db.prepare("UPDATE socle_sessions SET renfort = 0 WHERE compte = (SELECT id FROM socle_comptes WHERE identifiant = 'ana')").run();
+  try { return await fn(); } finally { for (const x of avant) app.db.prepare('UPDATE socle_sessions SET renfort = ? WHERE id = ?').run(x.renfort, x.id); }
+}
+await t('où part le mot de passe d\'une boîte : renfort exigé, métadonnées et plages réservées refusées', async () => {
+  await sansRenfort(async () => {
+    const r = await admin.patch(`/api/accounts/${accId}`, { imapHost: 'ailleurs.example' });
+    assert.equal(r.status, 403);
+    assert.equal(r.json.details?.renfort, true);
+    assert.equal((await admin.patch(`/api/accounts/${accId}`, { password: 'autre' })).status, 403);
+    assert.equal((await admin.post('/api/accounts', { addr: 'x@exemple.fr' })).status, 403);
+    assert.equal((await admin.patch(`/api/accounts/${accId}`, { aliasOnly: false })).status, 200, 'un réglage sans destination reste libre');
+  });
+  assert.equal(app.depot.config.accounts[0].imapHost, 'localhost');
+  for (const h of ['169.254.169.254', '0.0.0.0', '[fe80::1]']) assert.equal((await admin.patch(`/api/accounts/${accId}`, { imapHost: h })).status, 400, h);
+  assert.equal((await admin.patch('/api/settings', { webhook: { url: 'http://169.254.169.254/latest/meta-data' } })).status, 400);
+});
 await t('le mot de passe est scellé dans la base, jamais en clair', async () => {
   app.depot.flush();
   const brut = fs.readFileSync(path.join(dossier, 'cachet.db')).toString('latin1') + (fs.existsSync(path.join(dossier, 'cachet.db-wal')) ? fs.readFileSync(path.join(dossier, 'cachet.db-wal')).toString('latin1') : '');
@@ -547,7 +566,7 @@ await t('CORS : refusé tant que l\'origine n\'est pas déclarée, jamais « * �
   assert.equal(pre.headers.get('access-control-allow-credentials'), null);
   assert.ok(/x-cachet-key/.test(pre.headers.get('access-control-allow-headers')));
 });
-await t('le webhook part signé, avec l\'en-tête demandé, sans suivre de redirection', async () => {
+await t('le webhook part signé, avec l\'en-tête demandé', async () => {
   const recus = [];
   const srv = http.createServer((rq, rs) => {
     let d = '';
@@ -566,6 +585,20 @@ await t('le webhook part signé, avec l\'en-tête demandé, sans suivre de redir
   assert.equal(recus[0].entetes['x-cachet-key'], undefined, 'l\'en-tête par défaut traîne encore');
   assert.equal(recus[0].entetes['x-cachet-signature'], signature(JSON.stringify(recus[0].corps), 'hmac-partage'));
   srv.close();
+  await admin.patch('/api/settings', { webhook: { enabled: false } });
+});
+await t('une redirection du webhook n\'est jamais suivie', async () => {
+  let suivie = 0;
+  const cible = http.createServer((rq, rs) => { suivie++; rs.end(); });
+  await new Promise(r => cible.listen(0, '127.0.0.1', r));
+  const renvoi = http.createServer((rq, rs) => { rq.resume(); rs.writeHead(307, { location: `http://127.0.0.1:${cible.address().port}/vol` }).end(); });
+  await new Promise(r => renvoi.listen(0, '127.0.0.1', r));
+  await admin.patch('/api/settings', { webhook: { enabled: true, url: `http://127.0.0.1:${renvoi.address().port}/hook` } });
+  const r = await admin.post('/api/webhook/test');
+  assert.equal(r.json.ok, false);
+  assert.equal(r.json.status, 307);
+  assert.equal(suivie, 0, 'redirection suivie');
+  cible.close(); renvoi.close();
   await admin.patch('/api/settings', { webhook: { enabled: false } });
 });
 await t('Telegram : un jeton de forme invalide est refusé', async () => {
