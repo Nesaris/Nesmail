@@ -51,6 +51,12 @@ await t('adresse avec nom affiché', () => {
 await t('liste de destinataires', () => {
   assert.deepEqual(mime.addressList('a@x.fr, "B" <b@y.fr>'), ['a@x.fr', 'b@y.fr']);
 });
+await t('un nom affiché avec chevrons ou virgule ne prend pas la place de l\'adresse', () => {
+  const a = mime.addressOf('"<admin@exemple.fr>" <sonde@exemple.fr>');
+  assert.equal(a.addr, 'sonde@exemple.fr');
+  assert.equal(a.name, '<admin@exemple.fr>');
+  assert.deepEqual(mime.addressList('"Dupont, Jean" <j@x.fr>, "<b@y.fr>, c" <c@z.fr>'), ['j@x.fr', 'c@z.fr']);
+});
 await t('multipart : le texte brut gagne, le HTML est conservé à part', () => {
   const raw = makeMessage({ from: 'a@b.c', to: 'rmm@exemple.fr', subject: 'x', body: 'Agent hors ligne, réessai', encoded: 'multipart' });
   const r = mime.extractText(raw);
