@@ -468,6 +468,23 @@ await t('membre : traite le courrier, ne touche ni boîtes, ni règles, ni régl
   assert.equal((await membre.client.get('/api/apikey')).status, 403);
 });
 
+await t('balayage : chaque route exige sa preuve et son rôle, déclarés comme vérifiés', async () => {
+  const RANG = { lecture: 0, membre: 1, admin: 2 };
+  const routes = app.api.routeur.routes;
+  assert.ok(routes.length >= 40, `${routes.length} routes`);
+  const publiques = routes.filter(r => r.options.public).map(r => `${r.methode} ${r.re.source.replace(/\\\//g, '/')}`);
+  assert.deepEqual(publiques, ['GET ^/api/health$'], 'route publique imprévue');
+  const anonyme = new Client(port());
+  for (const r of routes.filter(x => !x.options.public)) {
+    const chemin = r.re.source.slice(1, -1).replace(/\\\//g, '/').replace(/\(\[\^\/\]\+\)/g, 'x').replace(/\\(.)/g, '$1');
+    const ecrit = r.methode !== 'GET';
+    assert.ok(RANG[r.options.role] !== undefined, `${r.methode} ${chemin} sans rôle déclaré`);
+    assert.equal((await anonyme.req(r.methode, chemin, ecrit ? {} : undefined)).status, 401, `${r.methode} ${chemin} sans preuve`);
+    if (RANG[r.options.role] > RANG.lecture) assert.equal((await lecteur.client.req(r.methode, chemin, ecrit ? {} : undefined)).status, 403, `${r.methode} ${chemin} en lecture`);
+    if (RANG[r.options.role] > RANG.membre) assert.equal((await membre.client.req(r.methode, chemin, ecrit ? {} : undefined)).status, 403, `${r.methode} ${chemin} en membre`);
+  }
+});
+
 console.log('\n── clés, jeton du Hub, CORS, webhook ──');
 let cleComplete, cleEnvoi;
 await t('les clés ne se dévoilent qu\'après confirmation d\'identité', async () => {
