@@ -351,6 +351,8 @@ await t('où part le mot de passe d\'une boîte : renfort exigé, métadonnées 
     assert.equal((await admin.patch(`/api/accounts/${accId}`, { password: 'autre' })).status, 403);
     assert.equal((await admin.post('/api/accounts', { addr: 'x@exemple.fr' })).status, 403);
     assert.equal((await admin.patch(`/api/accounts/${accId}`, { aliasOnly: false })).status, 200, 'un réglage sans destination reste libre');
+    assert.equal((await admin.post('/api/rules', { name: 'x', conditions: { mode: 'all', items: [{ champ: 'any', op: 'contient', valeur: 'x' }] }, actions: { delete: true } })).status, 403, 'règle qui supprime sans renfort');
+    assert.equal((await admin.post('/api/apikey/rotate')).status, 403, 'clé créée sans renfort');
   });
   assert.equal(app.depot.config.accounts[0].imapHost, 'localhost');
   for (const h of ['169.254.169.254', '0.0.0.0', '[fe80::1]']) assert.equal((await admin.patch(`/api/accounts/${accId}`, { imapHost: h })).status, 400, h);
