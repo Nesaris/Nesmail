@@ -627,6 +627,16 @@ await t('Telegram : un jeton de forme invalide est refusé', async () => {
 });
 
 console.log('\n── divers ──');
+await t('l\'état rendu à l\'interface est borné : mille tickets au plus', async () => {
+  const avant = app.depot.state.tickets;
+  app.depot.state.tickets = Array.from({ length: 1200 }, (_, i) => ({ id: 'TCK-ESSAI' + i, status: 'nouveau', urgency: 'basse', service: 'x', subject: 's', history: [], updatedAt: new Date().toISOString() }));
+  try {
+    const s = (await admin.get('/api/state')).json;
+    assert.equal(s.tickets.length, 1000);
+    assert.equal(s.tickets[0].id, 'TCK-ESSAI0');
+    assert.equal((await admin.get('/api/tickets?limit=100000')).json.tickets.length, 1000);
+  } finally { app.depot.state.tickets = avant; }
+});
 await t('l\'accusé de réception accepte plusieurs formes, borné', async () => {
   const liste = (await admin.get('/api/messages/detailed')).json.messages;
   assert.equal((await admin.post('/api/ack', { ids: [liste[0].id] })).json.acquittes, 1);
