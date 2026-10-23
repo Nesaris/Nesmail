@@ -4,6 +4,10 @@
 // n'est jamais injecté comme balisage : il est relu par le navigateur dans un
 // document inerte, puis reconstruit élément par élément sur une liste blanche.
 import { Api, porte, pageSecurite, pageComptes, appliquerTheme, estSombre, confirmer, dialogue, h } from '/socle/compte.js';
+// Tout balisage de l'interface passe par html`…` du socle : les chaînes
+// littérales du code seules sont lues comme du HTML, chaque valeur devient un
+// nœud texte ou un attribut. Aucune affectation d'innerHTML.
+import { html, poser } from '/socle/gabarit.js';
 
 const URG = { basse: 'Basse', normale: 'Normale', haute: 'Haute', crit: 'Critique' };
 const STATUS = { nouveau: 'Nouveau', cours: 'En cours', traite: 'Traité' };
@@ -22,20 +26,20 @@ const PROVIDERS = {
 };
 
 const ICON = {
-  ticket: '<svg class="i" viewBox="0 0 24 24"><rect x="3.5" y="5.5" width="17" height="13" rx="2.4"/><path d="M8 5.5v13M11.5 9.5h6M11.5 13h4"/></svg>',
-  mail: '<svg class="i" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="2.4"/><path d="M3.8 7.2 12 13l8.2-5.8"/></svg>',
-  warn: '<svg class="i" viewBox="0 0 24 24"><path d="M12 4.6 20.5 19.4h-17z"/><path d="M12 10v4M12 16.8h.01"/></svg>',
-  clock: '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.4V12l3 1.8"/></svg>',
-  check: '<svg class="i" viewBox="0 0 24 24"><path d="M5.5 12.5 10 17l8.5-9.5"/></svg>',
-  route: '<svg class="i" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="7.5" cy="17" r="2.2"/></svg>',
-  folder: '<svg class="i" viewBox="0 0 24 24"><path d="M4 7.5h4.6l1.6-2h9.8v11.6a1.4 1.4 0 0 1-1.4 1.4H5.4A1.4 1.4 0 0 1 4 17.1z"/></svg>'
+  ticket: html`<svg class="i" viewBox="0 0 24 24"><rect x="3.5" y="5.5" width="17" height="13" rx="2.4"/><path d="M8 5.5v13M11.5 9.5h6M11.5 13h4"/></svg>`,
+  mail: html`<svg class="i" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="2.4"/><path d="M3.8 7.2 12 13l8.2-5.8"/></svg>`,
+  warn: html`<svg class="i" viewBox="0 0 24 24"><path d="M12 4.6 20.5 19.4h-17z"/><path d="M12 10v4M12 16.8h.01"/></svg>`,
+  clock: html`<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M12 7.4V12l3 1.8"/></svg>`,
+  check: html`<svg class="i" viewBox="0 0 24 24"><path d="M5.5 12.5 10 17l8.5-9.5"/></svg>`,
+  route: html`<svg class="i" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="7.5" cy="17" r="2.2"/></svg>`,
+  folder: html`<svg class="i" viewBox="0 0 24 24"><path d="M4 7.5h4.6l1.6-2h9.8v11.6a1.4 1.4 0 0 1-1.4 1.4H5.4A1.4 1.4 0 0 1 4 17.1z"/></svg>`
 };
+const ENVOI_OK = html`<span class="arrow">·</span>envoi ok`;
 
 let S = { accounts: [], tickets: [], messages: [], folders: [], rules: [], log: [], settings: {}, poll: {} };
 let view = { page: 'intake', intakeAlias: 'all', mailAcct: 'all', folder: 'all', sel: 0, sel2: 0, q: '', html: {} };
 
 const $ = id => document.getElementById(id);
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // Le client du socle : jeton anti-CSRF, confirmation d'identité demandée par
 // le serveur (renfort, dévoilement), retour à la porte si la session tombe.
@@ -107,11 +111,11 @@ function menu(x, y, items) {
   fermeMenu();
   const el = document.createElement('div');
   el.className = 'menu';
-  el.innerHTML = items.map((it, i) => {
-    if (it.sep) return '<div class="sep"></div>';
-    if (it.titre) return `<div class="titre">${esc(it.titre)}</div>`;
-    return `<button type="button" data-i="${i}" class="${it.danger ? 'danger' : ''}" ${it.disabled ? 'disabled' : ''}>${it.icon || ''}<span>${esc(it.label)}</span></button>`;
-  }).join('');
+  poser(el, items.map((it, i) => {
+    if (it.sep) return html`<div class="sep"></div>`;
+    if (it.titre) return html`<div class="titre">${it.titre}</div>`;
+    return html`<button type="button" data-i=${i} class=${it.danger ? 'danger' : ''} disabled=${Boolean(it.disabled)}>${it.icon || ''}<span>${it.label}</span></button>`;
+  }));
   document.body.appendChild(el);
   const r = el.getBoundingClientRect();
   el.style.left = Math.max(8, Math.min(x, window.innerWidth - r.width - 8)) + 'px';
@@ -183,25 +187,22 @@ function isIntakeMsg(m) {
 
 function renderAlerts() {
   const bad = S.accounts.filter(a => a.lastError);
-  let html = '';
-  if (!S.accounts.length) {
-    html += `<div class="banner warn">${ICON.warn}<span>Aucune boîte configurée. Ajoutez-en une dans Comptes pour démarrer.</span></div>`;
-  }
-  for (const a of bad) html += `<div class="banner">${ICON.warn}<span><b>${esc(a.addr)}</b> — ${esc(a.lastError)}</span></div>`;
-  $('alerts').innerHTML = html;
+  poser($('alerts'),
+    S.accounts.length ? '' : html`<div class="banner warn">${ICON.warn}<span>Aucune boîte configurée. Ajoutez-en une dans Comptes pour démarrer.</span></div>`,
+    bad.map(a => html`<div class="banner">${ICON.warn}<span><b>${a.addr}</b> — ${a.lastError}</span></div>`));
 }
 
 function renderFolders() {
   const nav = $('folderNav');
   const dossiers = S.folders || [];
   if (!dossiers.length) {
-    nav.innerHTML = '<p class="vide-nav">Aucun dossier</p>';
+    poser(nav, html`<p class="vide-nav">Aucun dossier</p>`);
     return;
   }
-  nav.innerHTML = dossiers.map(f => {
+  poser(nav, dossiers.map(f => {
     const n = S.messages.filter(m => m.folder === f.id).length;
-    return `<button class="nav-item ${view.page === 'mail' && view.folder === f.id ? 'on' : ''}" data-donnee data-folder="${esc(f.id)}">${ICON.folder}<span class="nom" title="${esc(f.name)}">${esc(f.name)}</span>${n ? `<span class="count">${n}</span>` : ''}</button>`;
-  }).join('');
+    return html`<button class="nav-item ${view.page === 'mail' && view.folder === f.id ? 'on' : ''}" data-donnee data-folder=${f.id}>${ICON.folder}<span class="nom" title=${f.name}>${f.name}</span>${n ? html`<span class="count">${n}</span>` : ''}</button>`;
+  }));
   nav.querySelectorAll('[data-folder]').forEach(b => {
     b.onclick = () => {
       view.folder = b.dataset.folder; view.mailAcct = 'all'; view.sel2 = 0;
@@ -240,13 +241,12 @@ function renderIntake() {
     : 'Aucune boîte réglée en « boîte à tickets » pour l’instant.';
 
   const tous = S.messages.filter(m => !m.sent && isIntakeMsg(m));
-  $('intakeChips').innerHTML = [
-    `<button class="chip ${view.intakeAlias === 'all' ? 'on' : ''}" data-alias="all">Tous les services<span class="n">${tous.length}</span></button>`,
-    ...aliases.map(al => {
+  poser($('intakeChips'),
+    html`<button class="chip ${view.intakeAlias === 'all' ? 'on' : ''}" data-alias="all">Tous les services<span class="n">${tous.length}</span></button>`,
+    aliases.map(al => {
       const n = tous.filter(m => (m.toList || []).concat(m.deliveredTo || []).includes(al.addr)).length;
-      return `<button class="chip ${view.intakeAlias === al.addr ? 'on' : ''}" data-alias="${esc(al.addr)}">${esc(al.addr.split('@')[0])}@<span class="n">${n}</span></button>`;
-    })
-  ].join('');
+      return html`<button class="chip ${view.intakeAlias === al.addr ? 'on' : ''}" data-alias=${al.addr}>${al.addr.split('@')[0]}@<span class="n">${n}</span></button>`;
+    }));
   $('intakeChips').querySelectorAll('[data-alias]').forEach(b => b.onclick = () => {
     view.intakeAlias = b.dataset.alias; view.sel = 0; renderIntake();
   });
@@ -264,10 +264,10 @@ function renderIntake() {
 function renderMailPage() {
   const envoyes = view.folder === '__sent';
   const boxes = S.accounts.filter(a => !isIntake(a));
-  $('mailChips').innerHTML = envoyes ? '' : [
-    `<button class="chip ${view.mailAcct === 'all' ? 'on' : ''}" data-macct="all">Toutes les boîtes</button>`,
-    ...boxes.map(a => `<button class="chip ${view.mailAcct === a.id ? 'on' : ''}" data-macct="${esc(a.id)}">${esc(a.addr)}</button>`)
-  ].join('');
+  poser($('mailChips'), envoyes ? '' : [
+    html`<button class="chip ${view.mailAcct === 'all' ? 'on' : ''}" data-macct="all">Toutes les boîtes</button>`,
+    ...boxes.map(a => html`<button class="chip ${view.mailAcct === a.id ? 'on' : ''}" data-macct=${a.id}>${a.addr}</button>`)
+  ]);
   $('mailChips').querySelectorAll('[data-macct]').forEach(b => b.onclick = () => {
     view.mailAcct = b.dataset.macct; view.folder = 'all'; view.sel2 = 0; renderFolders(); renderMailPage();
   });
@@ -291,29 +291,29 @@ function renderMailPage() {
 
 function renderMessageList(list, items, selKey, readerEl, noteEl, intake) {
   if (!items.length) {
-    list.innerHTML = `<div class="empty"><strong>Rien ici</strong><p>${intake ? 'Aucune alerte relevée pour ce filtre.' : 'Aucun message.'}</p></div>`;
-    readerEl.innerHTML = `<div class="empty"><p>${intake ? 'Le calme plat, c’est plutôt bon signe.' : 'Sélectionnez un message.'}</p></div>`;
+    poser(list, html`<div class="empty"><strong>Rien ici</strong><p>${intake ? 'Aucune alerte relevée pour ce filtre.' : 'Aucun message.'}</p></div>`);
+    poser(readerEl, html`<div class="empty"><p>${intake ? 'Le calme plat, c’est plutôt bon signe.' : 'Sélectionnez un message.'}</p></div>`);
     noteEl.textContent = '—';
     return;
   }
   if (view[selKey] >= items.length) view[selKey] = 0;
-  list.innerHTML = items.map((m, i) => {
+  poser(list, items.map((m, i) => {
     const t = m.ticketId ? ticketOf(m.ticketId) : null;
     const urgTone = t ? (t.urgency === 'crit' ? 'hot' : t.urgency === 'haute' ? 'amber' : 'key') : '';
     const qui = m.sent ? 'À ' + ((m.toList || [])[0] || '') : (m.fromName || m.fromAddr);
-    return `<button class="mailrow ${i === view[selKey] ? 'on' : ''}" type="button" data-donnee data-i="${i}">
-      <span class="itile ${t ? urgTone : 'ini ' + tone(m.fromAddr)}">${t ? ICON.ticket : esc(initials(m.fromName, m.fromAddr))}</span>
+    return html`<button class="mailrow ${i === view[selKey] ? 'on' : ''}" type="button" data-donnee data-i=${i}>
+      <span class="itile ${t ? urgTone : 'ini ' + tone(m.fromAddr)}">${t ? ICON.ticket : initials(m.fromName, m.fromAddr)}</span>
       <span>
-        <span class="head"><span class="dot ${m.unread ? '' : 'off'}"></span><b>${esc(qui)}</b>
-          ${!intake && m.folder ? `<span class="mini">${esc(folderName(m.folder) || '')}</span>` : ''}
-          ${t ? `<span class="mini tk">${esc(t.id)}</span><span class="urg ${esc(t.urgency)}"><i></i>${URG[t.urgency]}</span>` : ''}
-          ${t && t.occurrences > 1 ? `<span class="occ">×${Number(t.occurrences)}</span>` : ''}</span>
-        <span class="subj">${esc(m.subject)}</span>
-        <span class="prev">${esc(String(m.text || '').replace(/\s+/g, ' ').slice(0, 120))}</span>
+        <span class="head"><span class="dot ${m.unread ? '' : 'off'}"></span><b>${qui}</b>
+          ${!intake && m.folder ? html`<span class="mini">${folderName(m.folder) || ''}</span>` : ''}
+          ${t ? html`<span class="mini tk">${t.id}</span><span class="urg ${t.urgency}"><i></i>${URG[t.urgency]}</span>` : ''}
+          ${t && t.occurrences > 1 ? html`<span class="occ">×${t.occurrences}</span>` : ''}</span>
+        <span class="subj">${m.subject}</span>
+        <span class="prev">${String(m.text || '').replace(/\s+/g, ' ').slice(0, 120)}</span>
       </span>
-      <span class="side-note">${clock(m.receivedAt)}<br>${esc(((m.toList || [])[0] || m.account || '').split('@')[0])}</span>
+      <span class="side-note">${clock(m.receivedAt)}<br>${((m.toList || [])[0] || m.account || '').split('@')[0]}</span>
     </button>`;
-  }).join('');
+  }));
   list.querySelectorAll('[data-i]').forEach(b => {
     b.onclick = () => { view[selKey] = +b.dataset.i; renderMessageList(list, items, selKey, readerEl, noteEl, intake); };
     b.oncontextmenu = e => menuMessage(e, items[+b.dataset.i]);
@@ -332,34 +332,34 @@ function renderReader(el, noteEl, m) {
   const aHtml = Boolean(m.html);
   const brut = view.html[m.id] === 'texte';
   const corps = (aHtml && !brut)
-    ? '<div class="bodyhtml" data-corps></div>'
-    : `<p class="bodytext">${esc(m.text || '(corps vide)')}</p>`;
+    ? html`<div class="bodyhtml" data-corps></div>`
+    : html`<p class="bodytext">${m.text || '(corps vide)'}</p>`;
   const bascule = aHtml
-    ? `<button class="bascule" type="button" data-bascule>${brut ? 'Afficher la mise en forme' : 'Afficher en texte brut'}${m.imagesMasquees ? ` · ${Number(m.imagesMasquees)} image(s) bloquée(s)` : ''}</button>`
+    ? html`<button class="bascule" type="button" data-bascule>${brut ? 'Afficher la mise en forme' : 'Afficher en texte brut'}${m.imagesMasquees ? ` · ${m.imagesMasquees} image(s) bloquée(s)` : ''}</button>`
     : '';
 
   const dests = [...new Set([].concat(m.toList || [], m.ccList || [], m.deliveredTo || []))];
   const connus = allAliases().map(a => a.addr);
 
-  el.innerHTML = `
-    ${t ? `<button class="linkbar" type="button" data-tk="${esc(t.id)}">${ICON.ticket}
-      <span><b>${esc(t.id)} · ${STATUS[t.status]}</b><span>${esc(t.service)} · urgence ${URG[t.urgency].toLowerCase()}${t.occurrences > 1 ? ` · ${Number(t.occurrences)} occurrences` : ''}</span></span>
+  poser(el, html`
+    ${t ? html`<button class="linkbar" type="button" data-tk=${t.id}>${ICON.ticket}
+      <span><b>${t.id} · ${STATUS[t.status]}</b><span>${`${t.service} · urgence ${URG[t.urgency].toLowerCase()}${t.occurrences > 1 ? ` · ${t.occurrences} occurrences` : ''}`}</span></span>
       <svg class="i sm pousse" viewBox="0 0 24 24"><path d="M9 5.5 15.5 12 9 18.5"/></svg></button>` : ''}
-    <h3>${esc(m.subject)}</h3>
+    <h3>${m.subject}</h3>
     <div class="meta">
-      <span class="itile ini ${tone(m.fromAddr)}">${esc(initials(m.fromName, m.fromAddr))}</span>
-      <span><b>${esc(m.fromName || '')}</b><span>${esc(m.fromAddr)}</span></span>
+      <span class="itile ini ${tone(m.fromAddr)}">${initials(m.fromName, m.fromAddr)}</span>
+      <span><b>${m.fromName || ''}</b><span>${m.fromAddr}</span></span>
       <span class="pousse cell-mono">${clock(m.receivedAt)}</span>
     </div>
     ${bascule}
     ${corps}
     <div class="dests">
-      ${dests.map(d => `<span class="mini ${connus.includes(d) ? 'tk' : ''}">${esc(d)}</span>`).join(' ') || 'aucun destinataire lisible'}
+      ${dests.length ? dests.map((d, i) => html`${i ? ' ' : ''}<span class="mini ${connus.includes(d) ? 'tk' : ''}">${d}</span>`) : 'aucun destinataire lisible'}
     </div>
     <div class="toolbar">
-      <button class="btn sm" type="button" data-reply><svg class="i sm" viewBox="0 0 24 24"><path d="M9 7 4.5 11.5 9 16"/><path d="M4.5 11.5H14a5.5 5.5 0 0 1 5.5 5.5v1.5"/></svg>Répondre<span class="depuis"> depuis ${esc(from ? from.split('@')[0] + '@' : '—')}</span></button>
-      ${t ? `<button class="btn sm" type="button" data-tk="${esc(t.id)}">${ICON.ticket}Voir ${esc(t.id)}</button>` : ''}
-    </div>`;
+      <button class="btn sm" type="button" data-reply><svg class="i sm" viewBox="0 0 24 24"><path d="M9 7 4.5 11.5 9 16"/><path d="M4.5 11.5H14a5.5 5.5 0 0 1 5.5 5.5v1.5"/></svg>Répondre<span class="depuis"> depuis ${from ? from.split('@')[0] + '@' : '—'}</span></button>
+      ${t ? html`<button class="btn sm" type="button" data-tk=${t.id}>${ICON.ticket}Voir ${t.id}</button>` : ''}
+    </div>`);
 
   el.querySelector('[data-corps]')?.append(htmlSur(m.html));
   el.querySelectorAll('[data-tk]').forEach(b => b.onclick = () => openTicket(b.dataset.tk));
@@ -455,19 +455,19 @@ function renderTickets() {
     const items = S.tickets.filter(t => t.status === st && match(t));
     $(notes[st]).textContent = items.length;
     const box = $(cols[st]);
-    if (!items.length) { box.innerHTML = `<div class="empty serre"><p>Aucun ticket ici.</p></div>`; continue; }
-    box.innerHTML = items.map(t => `
-      <button class="tk ${esc(t.urgency)}" type="button" data-tk="${esc(t.id)}">
-        <span class="top"><span class="id">${esc(t.id)}</span><span class="svc">${esc(t.service)}</span>
-          ${t.host ? `<span class="mini">${esc(t.host)}</span>` : ''}
-          ${t.occurrences > 1 ? `<span class="occ">×${Number(t.occurrences)}</span>` : ''}</span>
-        <strong>${esc(t.subject)}</strong>
+    if (!items.length) { poser(box, html`<div class="empty serre"><p>Aucun ticket ici.</p></div>`); continue; }
+    poser(box, items.map(t => html`
+      <button class="tk ${t.urgency}" type="button" data-tk=${t.id}>
+        <span class="top"><span class="id">${t.id}</span><span class="svc">${t.service}</span>
+          ${t.host ? html`<span class="mini">${t.host}</span>` : ''}
+          ${t.occurrences > 1 ? html`<span class="occ">×${t.occurrences}</span>` : ''}</span>
+        <strong>${t.subject}</strong>
         <span class="foot">
           <span class="urg ${t.urgency}"><i></i>${URG[t.urgency]}</span>
           <span class="auto">${t.auto ? 'auto' : 'manuel'} · ${ago(t.createdAt)}</span>
-          ${st !== 'traite' ? `<span class="adv" data-adv="${esc(t.id)}" title="Étape suivante"><svg class="i sm" viewBox="0 0 24 24"><path d="M5 12h13M13 7l5 5-5 5"/></svg></span>` : ''}
+          ${st !== 'traite' ? html`<span class="adv" data-adv=${t.id} title="Étape suivante"><svg class="i sm" viewBox="0 0 24 24"><path d="M5 12h13M13 7l5 5-5 5"/></svg></span>` : ''}
         </span>
-      </button>`).join('');
+      </button>`));
     box.querySelectorAll('[data-tk]').forEach(b => b.onclick = e => {
       if (e.target.closest('[data-adv]')) return;
       openTicket(b.dataset.tk);
@@ -484,59 +484,59 @@ function renderTickets() {
 
   const open = S.tickets.filter(t => t.status !== 'traite');
   const als = allAliases();
-  $('tickFigs').innerHTML = [
+  poser($('tickFigs'), [
     { t: 'warn', l: 'Critiques ouverts', v: open.filter(t => t.urgency === 'crit').length, s: 'à regarder en premier', i: ICON.warn },
     { t: 'amber', l: 'En cours', v: S.tickets.filter(t => t.status === 'cours').length, s: 'pris en charge', i: ICON.clock },
     { t: '', l: 'Traités', v: S.tickets.filter(t => t.status === 'traite').length, s: 'sur la période gardée', i: ICON.check },
     { t: 'plain', l: 'Alias surveillés', v: als.length, s: `${S.accounts.filter(isIntake).length} boîte(s) à tickets`, i: ICON.route }
-  ].map(f => `<div class="fig"><div class="tile ${f.t}">${f.i}</div><span>${f.l}</span><strong>${f.v}</strong><div class="delta">${f.s}</div></div>`).join('');
+  ].map(f => html`<div class="fig"><div class="tile ${f.t}">${f.i}</div><span>${f.l}</span><strong>${f.v}</strong><div class="delta">${f.s}</div></div>`));
 
   $('aliasNote').textContent = `${als.length} alias`;
-  $('aliasFlow').innerHTML = als.length ? als.map(al => {
+  poser($('aliasFlow'), als.length ? als.map(al => {
     const tone = al.urg === 'crit' ? 'hot' : al.urg === 'haute' ? 'amber' : 'key';
     const n = S.messages.filter(m => (m.toList || []).concat(m.deliveredTo || []).includes(al.addr)).length;
-    return `<div class="flowrow">
+    return html`<div class="flowrow">
       <div class="toggle ${al.active !== false ? 'on' : ''} dead"><i></i></div>
       <span class="itile ${tone}">${ICON.route}</span>
-      <div><strong>${esc(al.addr)}</strong>
-        <span class="chain">${esc(al.svc)}<span class="arrow">→</span>ticket<span class="arrow">→</span><span class="mk">${URG[al.urg].toLowerCase()}</span>${al.send !== false ? '<span class="arrow">·</span>envoi ok' : ''}</span></div>
+      <div><strong>${al.addr}</strong>
+        <span class="chain">${al.svc}<span class="arrow">→</span>ticket<span class="arrow">→</span><span class="mk">${URG[al.urg].toLowerCase()}</span>${al.send !== false ? ENVOI_OK : ''}</span></div>
       <div class="stat"><b>${n} reçu${n > 1 ? 's' : ''}</b>gardés</div>
     </div>`;
-  }).join('') : `<div class="empty"><strong>Aucun alias</strong><p>Ajoutez un alias par service sur votre boîte à tickets.</p></div>`;
+  }) : html`<div class="empty"><strong>Aucun alias</strong><p>Ajoutez un alias par service sur votre boîte à tickets.</p></div>`);
 }
 
 let openAliases = new Set();
 function renderAccounts() {
   $('acctNote').textContent = `${S.accounts.length} boîte${S.accounts.length > 1 ? 's' : ''} · ${allAliases().length} alias`;
-  let html = '';
+  const lignes = [];
   for (const a of S.accounts) {
     const p = PROVIDERS[a.provider] || PROVIDERS.manual;
     const als = aliasesOf(a);
-    html += `<tr data-arow="${esc(a.id)}">
+    lignes.push(html`<tr data-arow=${a.id}>
       <td><div class="who-cell">
-        ${als.length ? `<button class="chev ${openAliases.has(a.id) ? 'open' : ''}" type="button" data-chev="${esc(a.id)}"><svg class="i sm" viewBox="0 0 24 24"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg></button>` : '<span class="cale"></span>'}
+        ${als.length ? html`<button class="chev ${openAliases.has(a.id) ? 'open' : ''}" type="button" data-chev=${a.id}><svg class="i sm" viewBox="0 0 24 24"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg></button>` : html`<span class="cale"></span>`}
         <span class="itile mono ${isIntake(a) ? 'amber' : ''}">${p.mono}</span>
-        <span><b>${esc(a.name)}</b><span>${esc(a.addr)}</span></span></div></td>
-      <td class="cell-mono col-cache">${esc(a.imapHost || '—')}:${a.imapPort}</td>
-      <td class="col-cache2">${isIntake(a) ? '<span class="pill amber">Boîte à tickets</span>' : '<span class="pill">Courrier</span>'}</td>
+        <span><b>${a.name}</b><span>${a.addr}</span></span></div></td>
+      <td class="cell-mono col-cache">${a.imapHost || '—'}:${a.imapPort}</td>
+      <td class="col-cache2">${isIntake(a) ? html`<span class="pill amber">Boîte à tickets</span>` : html`<span class="pill">Courrier</span>`}</td>
       <td class="col-cache">${isIntake(a)
-        ? `<span class="chain">${als.length} alias<span class="arrow">→</span><span class="mk">un ticket par message</span>${a.aliasOnly ? '<span class="arrow">·</span>alias seulement' : ''}</span>`
-        : '<span class="cell-muted">Livré dans la boîte</span>'}</td>
+        ? html`<span class="chain">${als.length} alias<span class="arrow">→</span><span class="mk">un ticket par message</span>${a.aliasOnly ? html`<span class="arrow">·</span>alias seulement` : ''}</span>`
+        : html`<span class="cell-muted">Livré dans la boîte</span>`}</td>
       <td class="col-cache2"><span class="tag ${a.lastError ? 'held' : a.lastOk ? '' : 'idle'}"><i class="d"></i>${a.lastError ? 'erreur' : a.lastOk ? 'relevée ' + ago(a.lastOk) : 'jamais relevée'}</span></td>
-      <td class="cell-right"><button class="btn quiet sm" data-acct="${esc(a.id)}">Modifier</button></td>
-    </tr>`;
+      <td class="cell-right"><button class="btn quiet sm" data-acct=${a.id}>Modifier</button></td>
+    </tr>`);
     if (als.length && openAliases.has(a.id)) {
-      html += als.map(al => `<tr class="sub">
-        <td><div class="al"><span class="twig"></span><span class="addr">${esc(al.addr)}</span></div></td>
+      lignes.push(...als.map(al => html`<tr class="sub">
+        <td><div class="al"><span class="twig"></span><span class="addr">${al.addr}</span></div></td>
         <td class="cell-muted col-cache">alias</td>
-        <td class="col-cache2"><span class="pill">${esc(al.svc)}</span></td>
-        <td class="col-cache"><span class="chain">ticket<span class="arrow">→</span><span class="mk">${URG[al.urg].toLowerCase()}</span>${al.send !== false ? '<span class="arrow">·</span>envoi ok' : ''}</span></td>
+        <td class="col-cache2"><span class="pill">${al.svc}</span></td>
+        <td class="col-cache"><span class="chain">ticket<span class="arrow">→</span><span class="mk">${URG[al.urg].toLowerCase()}</span>${al.send !== false ? ENVOI_OK : ''}</span></td>
         <td class="col-cache2"><span class="tag ${al.active !== false ? '' : 'idle'}"><i class="d"></i>${al.active !== false ? 'actif' : 'inactif'}</span></td>
-        <td class="cell-right"><button class="btn quiet sm" data-acct="${esc(a.id)}">Régler</button></td>
-      </tr>`).join('');
+        <td class="cell-right"><button class="btn quiet sm" data-acct=${a.id}>Régler</button></td>
+      </tr>`));
     }
   }
-  $('acctBody').innerHTML = html;
+  poser($('acctBody'), lignes);
   $('acctBody').querySelectorAll('[data-acct]').forEach(b => b.onclick = () => openAccount(b.dataset.acct));
   $('acctBody').querySelectorAll('[data-chev]').forEach(b => b.onclick = () => {
     const id = b.dataset.chev;
@@ -596,12 +596,12 @@ function renderLog() {
   $('logNote').textContent = `${S.log.length} lignes`;
   const pill = k => k === 'ticket' ? 'pill amber' : k === 'erreur' ? 'pill bad'
     : k === 'envoi' ? 'pill out' : 'pill';
-  $('logBody').innerHTML = S.log.length ? S.log.map(l => `<tr>
-    <td class="cell-mono col-cache2">${esc(l.from || '—')}</td>
-    <td class="cell-muted col-cache">${esc(l.to || '—')}</td>
-    <td><span class="${pill(l.kind)}">${esc(l.what)}</span></td>
+  poser($('logBody'), S.log.length ? S.log.map(l => html`<tr>
+    <td class="cell-mono col-cache2">${l.from || '—'}</td>
+    <td class="cell-muted col-cache">${l.to || '—'}</td>
+    <td><span class=${pill(l.kind)}>${l.what}</span></td>
     <td class="cell-right cell-mono">${new Date(l.at).toLocaleTimeString('fr-FR')}</td>
-  </tr>`).join('') : `<tr><td colspan="4"><div class="empty"><p>Rien encore.</p></div></td></tr>`;
+  </tr>`) : html`<tr><td colspan="4"><div class="empty"><p>Rien encore.</p></div></td></tr>`);
 }
 
 const ruleScrim = $('ruleScrim');
@@ -629,18 +629,18 @@ function renderRules() {
   const liste = S.rules || [];
   $('rulesNote').textContent = liste.length ? `${liste.length} règle${liste.length > 1 ? 's' : ''}` : '';
   if (!liste.length) {
-    box.innerHTML = `<div class="empty"><strong>Aucune règle</strong><p>Une règle trie, marque, range ou supprime un message à son arrivée, avant la création du ticket.</p></div>`;
+    poser(box, html`<div class="empty"><strong>Aucune règle</strong><p>Une règle trie, marque, range ou supprime un message à son arrivée, avant la création du ticket.</p></div>`);
     return;
   }
-  box.innerHTML = liste.map(r => {
+  poser(box, liste.map(r => {
     const { c, a } = resumeRegle(r);
-    return `<div class="flowrow" data-rule="${esc(r.id)}">
-      <div class="toggle ${r.enabled !== false ? 'on' : ''}" data-bascule="${esc(r.id)}"><i></i></div>
+    return html`<div class="flowrow" data-rule=${r.id}>
+      <div class="toggle ${r.enabled !== false ? 'on' : ''}" data-bascule=${r.id}><i></i></div>
       <span class="itile ${r.actions && r.actions.delete ? 'hot' : 'key'}">${ICON.route}</span>
-      <div><strong>${esc(r.name)}</strong><span class="chain">${esc(c)}<span class="arrow">→</span><span class="mk">${esc(a)}</span></span></div>
+      <div><strong>${r.name}</strong><span class="chain">${c}<span class="arrow">→</span><span class="mk">${a}</span></span></div>
       <div class="stat col-cache2"><b>${r.enabled !== false ? 'active' : 'en pause'}</b>clic droit</div>
     </div>`;
-  }).join('');
+  }));
   box.querySelectorAll('[data-bascule]').forEach(t => t.onclick = async e => {
     e.stopPropagation();
     const r = (S.rules || []).find(x => x.id === t.dataset.bascule);
@@ -669,13 +669,13 @@ function renderRules() {
 function renderConds() {
   const box = $('rConds');
   if (!rDraft.conds.length) rDraft.conds = [{ champ: 'subject', op: 'contient', valeur: '' }];
-  box.innerHTML = rDraft.conds.map((c, i) => `
+  poser(box, rDraft.conds.map((c, i) => html`
     <div class="ligne cond">
-      <select data-c="${i}">${Object.entries(CHAMPS).map(([k, v]) => `<option value="${k}" ${k === c.champ ? 'selected' : ''}>${v}</option>`).join('')}</select>
-      <select data-o="${i}">${Object.entries(OPS).map(([k, v]) => `<option value="${k}" ${k === c.op ? 'selected' : ''}>${v}</option>`).join('')}</select>
-      <input data-v="${i}" value="${esc(c.valeur)}" placeholder="texte à chercher">
-      <button class="del" type="button" data-d="${i}"><svg class="i sm" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button>
-    </div>`).join('');
+      <select data-c=${i}>${Object.entries(CHAMPS).map(([k, v]) => html`<option value=${k} selected=${k === c.champ}>${v}</option>`)}</select>
+      <select data-o=${i}>${Object.entries(OPS).map(([k, v]) => html`<option value=${k} selected=${k === c.op}>${v}</option>`)}</select>
+      <input data-v=${i} value=${c.valeur} placeholder="texte à chercher">
+      <button class="del" type="button" data-d=${i}><svg class="i sm" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button>
+    </div>`));
   box.querySelectorAll('[data-c]').forEach(el => el.onchange = () => rDraft.conds[+el.dataset.c].champ = el.value);
   box.querySelectorAll('[data-o]').forEach(el => el.onchange = () => rDraft.conds[+el.dataset.o].op = el.value);
   box.querySelectorAll('[data-v]').forEach(el => el.oninput = () => rDraft.conds[+el.dataset.v].valeur = el.value);
@@ -718,8 +718,8 @@ function openRule(id) {
   rDraft = { id: r ? r.id : null, mode: r ? r.conditions.mode : 'all',
     conds: r ? (r.conditions.items || []).map(c => ({ ...c })) : [] };
   $('rName').value = r ? r.name : '';
-  $('rFolder').innerHTML = '<option value="">ne pas déplacer</option>' +
-    (S.folders || []).map(f => `<option value="${esc(f.id)}">${esc(f.name)}</option>`).join('');
+  poser($('rFolder'), html`<option value="">ne pas déplacer</option>`,
+    (S.folders || []).map(f => html`<option value=${f.id}>${f.name}</option>`));
   const a = (r && r.actions) || {};
   $('rFolder').value = a.folder || '';
   $('rRead').value = a.read === undefined ? '' : (a.read ? '1' : '0');
@@ -755,9 +755,9 @@ const acctScrim = $('acctScrim');
 let draft = { id: null, provider: 'manual', kind: 'mail', aliases: [] };
 
 function renderProvs() {
-  $('provs').innerHTML = Object.entries(PROVIDERS).map(([k, p]) => `
-    <button type="button" class="prov ${draft.provider === k ? 'on' : ''}" data-prov="${k}">
-      <span class="itile mono">${p.mono}</span><span><b>${p.label}</b><small>${p.hint}</small></span></button>`).join('');
+  poser($('provs'), Object.entries(PROVIDERS).map(([k, p]) => html`
+    <button type="button" class="prov ${draft.provider === k ? 'on' : ''}" data-prov=${k}>
+      <span class="itile mono">${p.mono}</span><span><b>${p.label}</b><small>${p.hint}</small></span></button>`));
   $('provs').querySelectorAll('[data-prov]').forEach(b => b.onclick = () => {
     draft.provider = b.dataset.prov;
     const p = PROVIDERS[draft.provider];
@@ -769,9 +769,9 @@ function renderProvs() {
 function applyKind() {
   document.querySelectorAll('#kindSeg button').forEach(b => b.classList.toggle('on', b.dataset.kind === draft.kind));
   $('kindNote').classList.toggle('hidden', draft.kind !== 'tickets');
-  $('aliasSect').innerHTML = draft.kind === 'tickets'
-    ? 'Alias <span class="hint">un alias par service — c’est lui qui décide du service et de l’urgence</span>'
-    : 'Alias <span class="hint">adresse, service, urgence, droit d’envoi</span>';
+  poser($('aliasSect'), draft.kind === 'tickets'
+    ? html`Alias <span class="hint">un alias par service — c’est lui qui décide du service et de l’urgence</span>`
+    : html`Alias <span class="hint">adresse, service, urgence, droit d’envoi</span>`);
 }
 document.querySelectorAll('#kindSeg button').forEach(b => b.onclick = () => { draft.kind = b.dataset.kind; applyKind(); });
 $('aOnly').onclick = function () { this.classList.toggle('on'); };
@@ -779,17 +779,17 @@ $('aOnly').onclick = function () { this.classList.toggle('on'); };
 function renderAliasEditor() {
   const box = $('aliasEditor');
   if (!draft.aliases.length) {
-    box.innerHTML = '<p class="vide-alias">Aucun alias.</p>';
+    poser(box, html`<p class="vide-alias">Aucun alias.</p>`);
     return;
   }
-  box.innerHTML = draft.aliases.map((al, i) => `
+  poser(box, draft.aliases.map((al, i) => html`
     <div class="ligne alias">
-      <input class="mono" value="${esc(al.addr)}" data-a="${i}" placeholder="service@exemple.fr">
-      <input value="${esc(al.svc)}" data-s="${i}" placeholder="service">
-      <select data-u="${i}">${Object.entries(URG).map(([k, v]) => `<option value="${k}" ${k === al.urg ? 'selected' : ''}>${v}</option>`).join('')}</select>
-      <button class="send ${al.send !== false ? 'on' : ''}" type="button" data-x="${i}" title="${al.send !== false ? 'Envoi autorisé' : 'Réception seule'}"><svg class="i sm" viewBox="0 0 24 24"><path d="M20.5 3.5 3.5 10.4l6.6 2.6 2.6 6.6z"/><path d="M10.1 13 20.5 3.5"/></svg></button>
-      <button class="del" type="button" data-d="${i}"><svg class="i sm" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button>
-    </div>`).join('');
+      <input class="mono" value=${al.addr} data-a=${i} placeholder="service@exemple.fr">
+      <input value=${al.svc} data-s=${i} placeholder="service">
+      <select data-u=${i}>${Object.entries(URG).map(([k, v]) => html`<option value=${k} selected=${k === al.urg}>${v}</option>`)}</select>
+      <button class="send ${al.send !== false ? 'on' : ''}" type="button" data-x=${i} title=${al.send !== false ? 'Envoi autorisé' : 'Réception seule'}><svg class="i sm" viewBox="0 0 24 24"><path d="M20.5 3.5 3.5 10.4l6.6 2.6 2.6 6.6z"/><path d="M10.1 13 20.5 3.5"/></svg></button>
+      <button class="del" type="button" data-d=${i}><svg class="i sm" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button>
+    </div>`));
   box.querySelectorAll('[data-a]').forEach(el => el.oninput = () => draft.aliases[+el.dataset.a].addr = el.value.trim());
   box.querySelectorAll('[data-s]').forEach(el => el.oninput = () => draft.aliases[+el.dataset.s].svc = el.value.trim());
   box.querySelectorAll('[data-u]').forEach(el => el.onchange = () => draft.aliases[+el.dataset.u].urg = el.value);
@@ -865,7 +865,7 @@ $('delAccount').onclick = async () => {
 };
 $('testAccount').onclick = async () => {
   const btn = $('testAccount');
-  btn.innerHTML = '<span class="spin"></span> Test…';
+  poser(btn, html`<span class="spin"></span> Test…`);
   try {
     const r = await api('POST', `/api/accounts/${draft.id}/test`);
     if (r.ok) toast(`Connexion OK · ${r.messages} messages dans le dossier`);
@@ -902,8 +902,8 @@ function openTicket(id, fromMsg) {
   $('tkSaveLabel').textContent = t ? 'Enregistrer' : 'Créer';
   $('tkDelete').classList.toggle('hidden', !t);
   $('tkHistWrap').classList.toggle('hidden', !t);
-  if (t) $('tkHist').innerHTML = (t.history || []).slice().reverse()
-    .map(h => `<li><time>${new Date(h.at).toLocaleString('fr-FR')}</time><span>${esc(h.what)}</span></li>`).join('');
+  if (t) poser($('tkHist'), (t.history || []).slice().reverse()
+    .map(e => html`<li><time>${new Date(e.at).toLocaleString('fr-FR')}</time><span>${e.what}</span></li>`));
   syncTk();
   tkScrim.classList.add('on');
   setTimeout(() => $('tSubj').focus(), 60);
@@ -940,7 +940,7 @@ function openReply(m, defaultFrom) {
   const acc = S.accounts.find(a => a.id === m.accountId);
   const options = expediteursPossibles(acc);
   $('replyTitle').textContent = 'Répondre';
-  $('rFrom').innerHTML = options.map(o => `<option value="${esc(o)}" ${o === defaultFrom ? 'selected' : ''}>${esc(o)}</option>`).join('');
+  poser($('rFrom'), options.map(o => html`<option value=${o} selected=${o === defaultFrom}>${o}</option>`));
   $('rTo').value = m.fromAddr;
   $('rSubj').value = /^re\s*:/i.test(m.subject) ? m.subject : `Re: ${m.subject}`;
   $('rText').value = '\n\n— ' + (m.fromName || m.fromAddr) + ' a écrit :\n' + String(m.text || '').split('\n').map(l => '> ' + l).join('\n');
@@ -955,7 +955,7 @@ function openCompose() {
   if (!options.length) { toast('Ajoutez d’abord une boîte'); return; }
   $('replyTitle').textContent = 'Écrire';
   $('replySub').textContent = 'nouveau message';
-  $('rFrom').innerHTML = options.map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join('');
+  poser($('rFrom'), options.map(o => html`<option value=${o}>${o}</option>`));
   $('rTo').value = ''; $('rSubj').value = ''; $('rText').value = '';
   $('replyErr').textContent = '';
   rCtx = { inReplyTo: null };
@@ -968,7 +968,7 @@ replyScrim.onclick = e => { if (e.target === replyScrim) replyScrim.classList.re
 $('replySheet').addEventListener('submit', async e => {
   e.preventDefault();
   $('replyErr').textContent = '';
-  $('replyLabel').innerHTML = 'Envoi…';
+  $('replyLabel').textContent = 'Envoi…';
   try {
     await api('POST', '/api/send', {
       from: $('rFrom').value, to: $('rTo').value,
@@ -1061,7 +1061,7 @@ $('saveHook').onclick = async () => {
   toast('Webhook enregistré'); await refresh();
 };
 $('testHook').onclick = async () => {
-  const b = $('testHook'); b.innerHTML = '<span class="spin"></span> Essai…';
+  const b = $('testHook'); poser(b, html`<span class="spin"></span> Essai…`);
   try {
     const r = await api('POST', '/api/webhook/test');
     toast(r.ok ? 'Le service a répondu, liaison bonne' : `Échec : ${r.error || 'HTTP ' + r.status}`);
