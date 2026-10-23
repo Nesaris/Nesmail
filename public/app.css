@@ -91,9 +91,9 @@ code{font-family:var(--mono);font-size:.92em}
 .fig strong{display:block;margin-top:6px;font-size:32px;font-weight:500;line-height:1;letter-spacing:-.04em}
 .fig .delta{margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--muted)}
 
-.split{display:grid;grid-template-columns:1.42fr 1fr;gap:16px;align-items:start}
+.split{display:grid;grid-template-columns:1.42fr 1fr;gap:16px;align-items:stretch}
 .split.even{grid-template-columns:1fr 1fr}
-.board{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:start}
+.board{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:stretch}
 @media(max-width:1080px){.split,.split.even,.board{grid-template-columns:1fr}.figures{grid-template-columns:repeat(2,1fr)}}
 
 /* Cartes */
@@ -216,7 +216,7 @@ tr.sub td{background:var(--well)!important;padding-top:9px;padding-bottom:9px}
 .bascule{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);margin-bottom:10px}
 .bascule:hover{color:var(--accent)}
 
-.empty{padding:44px 26px;text-align:center}
+.empty{padding:32px 24px;text-align:center}
 .empty .itile{margin:0 auto 14px;width:36px;height:36px;border-radius:11px}
 .empty strong{display:block;font-weight:500;margin-bottom:5px}
 .empty p{margin:0 auto;color:var(--muted);font-size:13px;max-width:40ch}
@@ -377,7 +377,7 @@ tr.sub td{background:var(--well)!important;padding-top:9px;padding-bottom:9px}
 .stage{flex:none;overflow:visible;min-height:auto;min-width:0}
 .shell>*{min-width:0}
 .page>*+*{margin-top:0}
-.page>.card+.card,.page>.split+.card{margin-top:16px}
+.page>.card+.card,.page>.split+.card,.page>.board+.card,.page>.split+.split{margin-top:16px}
 .split>.card+.card,.board>.card+.card{margin-top:0}
 #p-comptes>.page,#p-securite>.page{display:block}
 #p-comptes>.page>*+*,#p-securite>.page>*+*{margin-top:16px}
