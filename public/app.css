@@ -41,6 +41,7 @@ code{font-family:var(--mono);font-size:.92em}
 .nav-item:hover{color:var(--ink-soft);background:var(--hair-soft)}
 .nav-item.on{color:var(--ink);font-weight:500;background:var(--surface);box-shadow:var(--lift)}
 .nav-item.on .i{color:var(--accent)}
+.nav-item .nom{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nav-item .count{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--faint)}
 .nav-item .count.hot{color:var(--alarm)}
 .railcard{margin-top:auto;background:var(--surface);border-radius:12px;padding:13px 14px;box-shadow:var(--lift)}
@@ -175,6 +176,7 @@ tr.sub td{background:var(--well)!important;padding-top:9px;padding-bottom:9px}
 .mailrow:hover{background:var(--well)}
 .mailrow.on{background:var(--wash)}
 .mailrow.cible{background:var(--wash)}
+.mailrow>span{min-width:0}
 .mailrow .head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
 .mailrow .head b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mailrow .head b{font-weight:500}

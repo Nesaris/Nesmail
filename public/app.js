@@ -200,7 +200,7 @@ function renderFolders() {
   }
   nav.innerHTML = dossiers.map(f => {
     const n = S.messages.filter(m => m.folder === f.id).length;
-    return `<button class="nav-item ${view.page === 'mail' && view.folder === f.id ? 'on' : ''}" data-folder="${f.id}">${ICON.folder}${esc(f.name)}${n ? `<span class="count">${n}</span>` : ''}</button>`;
+    return `<button class="nav-item ${view.page === 'mail' && view.folder === f.id ? 'on' : ''}" data-donnee data-folder="${esc(f.id)}">${ICON.folder}<span class="nom" title="${esc(f.name)}">${esc(f.name)}</span>${n ? `<span class="count">${n}</span>` : ''}</button>`;
   }).join('');
   nav.querySelectorAll('[data-folder]').forEach(b => {
     b.onclick = () => {
@@ -266,7 +266,7 @@ function renderMailPage() {
   const boxes = S.accounts.filter(a => !isIntake(a));
   $('mailChips').innerHTML = envoyes ? '' : [
     `<button class="chip ${view.mailAcct === 'all' ? 'on' : ''}" data-macct="all">Toutes les boîtes</button>`,
-    ...boxes.map(a => `<button class="chip ${view.mailAcct === a.id ? 'on' : ''}" data-macct="${a.id}">${esc(a.addr)}</button>`)
+    ...boxes.map(a => `<button class="chip ${view.mailAcct === a.id ? 'on' : ''}" data-macct="${esc(a.id)}">${esc(a.addr)}</button>`)
   ].join('');
   $('mailChips').querySelectorAll('[data-macct]').forEach(b => b.onclick = () => {
     view.mailAcct = b.dataset.macct; view.folder = 'all'; view.sel2 = 0; renderFolders(); renderMailPage();
@@ -301,13 +301,13 @@ function renderMessageList(list, items, selKey, readerEl, noteEl, intake) {
     const t = m.ticketId ? ticketOf(m.ticketId) : null;
     const urgTone = t ? (t.urgency === 'crit' ? 'hot' : t.urgency === 'haute' ? 'amber' : 'key') : '';
     const qui = m.sent ? 'À ' + ((m.toList || [])[0] || '') : (m.fromName || m.fromAddr);
-    return `<button class="mailrow ${i === view[selKey] ? 'on' : ''}" type="button" data-i="${i}">
+    return `<button class="mailrow ${i === view[selKey] ? 'on' : ''}" type="button" data-donnee data-i="${i}">
       <span class="itile ${t ? urgTone : 'ini ' + tone(m.fromAddr)}">${t ? ICON.ticket : esc(initials(m.fromName, m.fromAddr))}</span>
       <span>
         <span class="head"><span class="dot ${m.unread ? '' : 'off'}"></span><b>${esc(qui)}</b>
           ${!intake && m.folder ? `<span class="mini">${esc(folderName(m.folder) || '')}</span>` : ''}
-          ${t ? `<span class="mini tk">${t.id}</span><span class="urg ${t.urgency}"><i></i>${URG[t.urgency]}</span>` : ''}
-          ${t && t.occurrences > 1 ? `<span class="occ">×${t.occurrences}</span>` : ''}</span>
+          ${t ? `<span class="mini tk">${esc(t.id)}</span><span class="urg ${esc(t.urgency)}"><i></i>${URG[t.urgency]}</span>` : ''}
+          ${t && t.occurrences > 1 ? `<span class="occ">×${Number(t.occurrences)}</span>` : ''}</span>
         <span class="subj">${esc(m.subject)}</span>
         <span class="prev">${esc(String(m.text || '').replace(/\s+/g, ' ').slice(0, 120))}</span>
       </span>
@@ -335,15 +335,15 @@ function renderReader(el, noteEl, m) {
     ? '<div class="bodyhtml" data-corps></div>'
     : `<p class="bodytext">${esc(m.text || '(corps vide)')}</p>`;
   const bascule = aHtml
-    ? `<button class="bascule" type="button" data-bascule>${brut ? 'Afficher la mise en forme' : 'Afficher en texte brut'}${m.imagesMasquees ? ` · ${m.imagesMasquees} image(s) bloquée(s)` : ''}</button>`
+    ? `<button class="bascule" type="button" data-bascule>${brut ? 'Afficher la mise en forme' : 'Afficher en texte brut'}${m.imagesMasquees ? ` · ${Number(m.imagesMasquees)} image(s) bloquée(s)` : ''}</button>`
     : '';
 
   const dests = [...new Set([].concat(m.toList || [], m.ccList || [], m.deliveredTo || []))];
   const connus = allAliases().map(a => a.addr);
 
   el.innerHTML = `
-    ${t ? `<button class="linkbar" type="button" data-tk="${t.id}">${ICON.ticket}
-      <span><b>${t.id} · ${STATUS[t.status]}</b><span>${esc(t.service)} · urgence ${URG[t.urgency].toLowerCase()}${t.occurrences > 1 ? ` · ${t.occurrences} occurrences` : ''}</span></span>
+    ${t ? `<button class="linkbar" type="button" data-tk="${esc(t.id)}">${ICON.ticket}
+      <span><b>${esc(t.id)} · ${STATUS[t.status]}</b><span>${esc(t.service)} · urgence ${URG[t.urgency].toLowerCase()}${t.occurrences > 1 ? ` · ${Number(t.occurrences)} occurrences` : ''}</span></span>
       <svg class="i sm pousse" viewBox="0 0 24 24"><path d="M9 5.5 15.5 12 9 18.5"/></svg></button>` : ''}
     <h3>${esc(m.subject)}</h3>
     <div class="meta">
@@ -358,7 +358,7 @@ function renderReader(el, noteEl, m) {
     </div>
     <div class="toolbar">
       <button class="btn sm" type="button" data-reply><svg class="i sm" viewBox="0 0 24 24"><path d="M9 7 4.5 11.5 9 16"/><path d="M4.5 11.5H14a5.5 5.5 0 0 1 5.5 5.5v1.5"/></svg>Répondre<span class="depuis"> depuis ${esc(from ? from.split('@')[0] + '@' : '—')}</span></button>
-      ${t ? `<button class="btn sm" type="button" data-tk="${t.id}">${ICON.ticket}Voir ${t.id}</button>` : ''}
+      ${t ? `<button class="btn sm" type="button" data-tk="${esc(t.id)}">${ICON.ticket}Voir ${esc(t.id)}</button>` : ''}
     </div>`;
 
   el.querySelector('[data-corps]')?.append(htmlSur(m.html));
@@ -457,15 +457,15 @@ function renderTickets() {
     const box = $(cols[st]);
     if (!items.length) { box.innerHTML = `<div class="empty serre"><p>Aucun ticket ici.</p></div>`; continue; }
     box.innerHTML = items.map(t => `
-      <button class="tk ${t.urgency}" type="button" data-tk="${t.id}">
-        <span class="top"><span class="id">${t.id}</span><span class="svc">${esc(t.service)}</span>
+      <button class="tk ${esc(t.urgency)}" type="button" data-tk="${esc(t.id)}">
+        <span class="top"><span class="id">${esc(t.id)}</span><span class="svc">${esc(t.service)}</span>
           ${t.host ? `<span class="mini">${esc(t.host)}</span>` : ''}
-          ${t.occurrences > 1 ? `<span class="occ">×${t.occurrences}</span>` : ''}</span>
+          ${t.occurrences > 1 ? `<span class="occ">×${Number(t.occurrences)}</span>` : ''}</span>
         <strong>${esc(t.subject)}</strong>
         <span class="foot">
           <span class="urg ${t.urgency}"><i></i>${URG[t.urgency]}</span>
           <span class="auto">${t.auto ? 'auto' : 'manuel'} · ${ago(t.createdAt)}</span>
-          ${st !== 'traite' ? `<span class="adv" data-adv="${t.id}" title="Étape suivante"><svg class="i sm" viewBox="0 0 24 24"><path d="M5 12h13M13 7l5 5-5 5"/></svg></span>` : ''}
+          ${st !== 'traite' ? `<span class="adv" data-adv="${esc(t.id)}" title="Étape suivante"><svg class="i sm" viewBox="0 0 24 24"><path d="M5 12h13M13 7l5 5-5 5"/></svg></span>` : ''}
         </span>
       </button>`).join('');
     box.querySelectorAll('[data-tk]').forEach(b => b.onclick = e => {
@@ -512,9 +512,9 @@ function renderAccounts() {
   for (const a of S.accounts) {
     const p = PROVIDERS[a.provider] || PROVIDERS.manual;
     const als = aliasesOf(a);
-    html += `<tr data-arow="${a.id}">
+    html += `<tr data-arow="${esc(a.id)}">
       <td><div class="who-cell">
-        ${als.length ? `<button class="chev ${openAliases.has(a.id) ? 'open' : ''}" type="button" data-chev="${a.id}"><svg class="i sm" viewBox="0 0 24 24"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg></button>` : '<span class="cale"></span>'}
+        ${als.length ? `<button class="chev ${openAliases.has(a.id) ? 'open' : ''}" type="button" data-chev="${esc(a.id)}"><svg class="i sm" viewBox="0 0 24 24"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg></button>` : '<span class="cale"></span>'}
         <span class="itile mono ${isIntake(a) ? 'amber' : ''}">${p.mono}</span>
         <span><b>${esc(a.name)}</b><span>${esc(a.addr)}</span></span></div></td>
       <td class="cell-mono col-cache">${esc(a.imapHost || '—')}:${a.imapPort}</td>
@@ -523,7 +523,7 @@ function renderAccounts() {
         ? `<span class="chain">${als.length} alias<span class="arrow">→</span><span class="mk">un ticket par message</span>${a.aliasOnly ? '<span class="arrow">·</span>alias seulement' : ''}</span>`
         : '<span class="cell-muted">Livré dans la boîte</span>'}</td>
       <td class="col-cache2"><span class="tag ${a.lastError ? 'held' : a.lastOk ? '' : 'idle'}"><i class="d"></i>${a.lastError ? 'erreur' : a.lastOk ? 'relevée ' + ago(a.lastOk) : 'jamais relevée'}</span></td>
-      <td class="cell-right"><button class="btn quiet sm" data-acct="${a.id}">Modifier</button></td>
+      <td class="cell-right"><button class="btn quiet sm" data-acct="${esc(a.id)}">Modifier</button></td>
     </tr>`;
     if (als.length && openAliases.has(a.id)) {
       html += als.map(al => `<tr class="sub">
@@ -532,7 +532,7 @@ function renderAccounts() {
         <td class="col-cache2"><span class="pill">${esc(al.svc)}</span></td>
         <td class="col-cache"><span class="chain">ticket<span class="arrow">→</span><span class="mk">${URG[al.urg].toLowerCase()}</span>${al.send !== false ? '<span class="arrow">·</span>envoi ok' : ''}</span></td>
         <td class="col-cache2"><span class="tag ${al.active !== false ? '' : 'idle'}"><i class="d"></i>${al.active !== false ? 'actif' : 'inactif'}</span></td>
-        <td class="cell-right"><button class="btn quiet sm" data-acct="${a.id}">Régler</button></td>
+        <td class="cell-right"><button class="btn quiet sm" data-acct="${esc(a.id)}">Régler</button></td>
       </tr>`).join('');
     }
   }
@@ -634,8 +634,8 @@ function renderRules() {
   }
   box.innerHTML = liste.map(r => {
     const { c, a } = resumeRegle(r);
-    return `<div class="flowrow" data-rule="${r.id}">
-      <div class="toggle ${r.enabled !== false ? 'on' : ''}" data-bascule="${r.id}"><i></i></div>
+    return `<div class="flowrow" data-rule="${esc(r.id)}">
+      <div class="toggle ${r.enabled !== false ? 'on' : ''}" data-bascule="${esc(r.id)}"><i></i></div>
       <span class="itile ${r.actions && r.actions.delete ? 'hot' : 'key'}">${ICON.route}</span>
       <div><strong>${esc(r.name)}</strong><span class="chain">${esc(c)}<span class="arrow">→</span><span class="mk">${esc(a)}</span></span></div>
       <div class="stat col-cache2"><b>${r.enabled !== false ? 'active' : 'en pause'}</b>clic droit</div>
@@ -719,7 +719,7 @@ function openRule(id) {
     conds: r ? (r.conditions.items || []).map(c => ({ ...c })) : [] };
   $('rName').value = r ? r.name : '';
   $('rFolder').innerHTML = '<option value="">ne pas déplacer</option>' +
-    (S.folders || []).map(f => `<option value="${f.id}">${esc(f.name)}</option>`).join('');
+    (S.folders || []).map(f => `<option value="${esc(f.id)}">${esc(f.name)}</option>`).join('');
   const a = (r && r.actions) || {};
   $('rFolder').value = a.folder || '';
   $('rRead').value = a.read === undefined ? '' : (a.read ? '1' : '0');
@@ -897,7 +897,7 @@ function openTicket(id, fromMsg) {
   $('tNotes').value = t?.notes || '';
   $('tkTitle').textContent = t ? t.id : 'Nouveau ticket';
   $('tkSub').textContent = t
-    ? `${t.service} · ${t.auto ? 'ouvert automatiquement' : 'créé à la main'}${t.occurrences > 1 ? ` · ${t.occurrences} occurrences` : ''}`
+    ? `${t.service} · ${t.auto ? 'ouvert automatiquement' : 'créé à la main'}${t.occurrences > 1 ? ` · ${Number(t.occurrences)} occurrences` : ''}`
     : 'créé à la main';
   $('tkSaveLabel').textContent = t ? 'Enregistrer' : 'Créer';
   $('tkDelete').classList.toggle('hidden', !t);
