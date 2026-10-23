@@ -658,6 +658,11 @@ await t('la page porte la version et la gamme, la CSP interdit le script en lign
   const ico = await fetch(base() + '/favicon.ico');
   assert.equal(ico.headers.get('content-type'), 'image/x-icon');
 });
+await t('l\'interface ne lit aucune valeur comme du HTML : gabarits du socle seulement', () => {
+  const code = fs.readFileSync(new URL('../public/app.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(code, /\.(innerHTML|outerHTML)\s*=|insertAdjacentHTML|document\.write|\beval\(|new Function/);
+  assert.match(code, /import \{ html, poser \} from '\/socle\/gabarit\.js'/);
+});
 await t('le rattrapage ouvre les tickets des messages orphelins', async () => {
   const avant = (await admin.get('/api/state')).json;
   const cible = avant.messages.find(m => m.ticketId && !m.sent);
