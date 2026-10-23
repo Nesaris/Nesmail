@@ -1,0 +1,64 @@
+# CACHET installé par le Hub.
+# Les {{...}} sont remplacés à l'installation : secrets générés, port d'hôte,
+# volume nommé et réseau partagé du Hub.
+services:
+  cachet:
+    image: ghcr.io/codexx64/cachet:{{config.IMAGE_TAG}}
+    container_name: {{service.host}}
+    restart: unless-stopped
+    networks: [hub]
+    ports:
+      - "{{hostport.http}}:8787"
+    volumes:
+      - {{volume.data}}:/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 256m
+    cpus: 0.5
+    pids_limit: 128
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    environment:
+      PORT: "8787"
+      CACHET_DATA: /data
+      # Jeton de service du Hub : courrier, tickets et envoi, jamais les boîtes,
+      # les règles, les réglages ni les comptes.
+      CACHET_HUB_TOKEN: "{{config.HUB_TOKEN}}"
+      CACHET_ENVOIS_MINUTE: "{{config.CACHET_ENVOIS_MINUTE}}"
+      # Reprise d'une 1.0 seulement : son ancien CACHET_SECRET.
+      CACHET_SECRET_V1: "{{config.CACHET_SECRET_V1}}"
+      # Comptes : clé maîtresse gardée par le Hub, accès HTTPS ou mode dégradé,
+      # relais de confiance.
+      SOCLE_CLE: "{{config.SOCLE_CLE}}"
+      SOCLE_CLE_ANCIENNE: "{{config.SOCLE_CLE_ANCIENNE}}"
+      SOCLE_HTTP: "{{config.SOCLE_HTTP}}"
+      SOCLE_JETON_INSTALLATION: "{{config.SOCLE_JETON_INSTALLATION}}"
+      # Gestion des comptes depuis le Hub (Comptes des services) : jeton à lui seul.
+      SOCLE_JETON_ADMIN_HUB: "{{config.HUB_ADMIN_TOKEN}}"
+      SOCLE_PROXYS: "{{config.SOCLE_PROXYS}}"
+      SOCLE_ORIGINES: "{{config.SOCLE_ORIGINES}}"
+      # Apparence choisie dans la page Thème du Hub : toutes les gammes, Lavande comprise.
+      SOCLE_THEME: "{{hub.apparence}}"
+      # Alertes de sécurité par courriel, si un relais est indiqué.
+      SOCLE_URL_PUBLIQUE: "{{config.SOCLE_URL_PUBLIQUE}}"
+      SOCLE_SMTP_HOTE: "{{config.SOCLE_SMTP_HOTE}}"
+      SOCLE_SMTP_PORT: "{{config.SOCLE_SMTP_PORT}}"
+      SOCLE_SMTP_SECURITE: "{{config.SOCLE_SMTP_SECURITE}}"
+      SOCLE_SMTP_UTILISATEUR: "{{config.SOCLE_SMTP_UTILISATEUR}}"
+      SOCLE_SMTP_MOTDEPASSE: "{{config.SOCLE_SMTP_MOTDEPASSE}}"
+      SOCLE_SMTP_DE: "{{config.SOCLE_SMTP_DE}}"
+
+networks:
+  hub:
+    name: {{hub.network}}
+    external: true
+
+volumes:
+  {{volume.data}}:
+    name: {{volume.data}}

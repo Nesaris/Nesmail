@@ -1,0 +1,819 @@
+{
+  "$schema": "https://raw.githubusercontent.com/CodexX64/hub-registry/main/schema/hub-extension.v1.json",
+  "manifestVersion": 1,
+  "id": "cachet",
+  "name": "CACHET",
+  "version": "2.0.0",
+  "description": "Boîte d'arrivée des alertes : relève les boîtes IMAP, fait de chaque alerte un ticket par service et urgence, répond depuis la bonne adresse.",
+  "icon": "mail",
+  "repository": "https://github.com/CodexX64/cachet",
+  "license": "MIT",
+  "minHubVersion": "0.14.0",
+  "install": {
+    "type": "compose",
+    "compose": "deploy/compose.hub.yml",
+    "remote": {
+      "supported": true,
+      "label": "Adresse de CACHET",
+      "placeholder": "http://192.0.2.30:8787",
+      "defaultPort": 8787,
+      "setupHelp": "Pour un CACHET déjà en service ailleurs : poser CACHET_HUB_TOKEN dans son environnement, redémarrer, puis coller ce jeton ici."
+    },
+    "healthcheck": {
+      "type": "http",
+      "path": "/api/health",
+      "expect": 200,
+      "timeout": "5s"
+    },
+    "arch": [
+      "amd64",
+      "arm64"
+    ],
+    "resources": {
+      "ramMb": 256,
+      "cpu": 0.5,
+      "diskMb": 1024
+    },
+    "ports": [
+      {
+        "name": "http",
+        "container": 8787,
+        "protocol": "http",
+        "expose": "proxy"
+      }
+    ],
+    "volumes": [
+      {
+        "name": "data",
+        "path": "/data"
+      }
+    ]
+  },
+  "config": [
+    {
+      "key": "IMAGE_TAG",
+      "label": "Version de l'image",
+      "type": "string",
+      "default": "2.0.0",
+      "help": "Étiquette de l'image. Absente du registre, le Hub la construit ici depuis le dépôt (tag v2.0.0)."
+    },
+    {
+      "key": "HUB_TOKEN",
+      "label": "Jeton de service",
+      "type": "secret",
+      "generate": "random:32",
+      "help": "Créé par le Hub. Il ouvre au Hub l'API du courrier, des tickets et de l'envoi — jamais les boîtes, les règles, les réglages ni les comptes."
+    },
+    {
+      "key": "HUB_ADMIN_TOKEN",
+      "label": "Jeton d'administration des comptes",
+      "type": "secret",
+      "generate": "random:48",
+      "advanced": true,
+      "help": "Généré par le Hub, distinct du jeton de service : il ne sert qu'à gérer les comptes de CACHET depuis Comptes des services, après confirmation de ton identité dans le Hub. Vide : aucune gestion depuis le Hub."
+    },
+    {
+      "key": "SOCLE_HTTP",
+      "label": "Accès sans HTTPS",
+      "type": "select",
+      "default": "0",
+      "required": true,
+      "options": [
+        {
+          "value": "0",
+          "label": "Non — NEXARC est servi en HTTPS (Relay ou certificat du Hub)"
+        },
+        {
+          "value": "1",
+          "label": "Oui — réseau de confiance, mode dégradé"
+        }
+      ],
+      "help": "Les clés d'accès n'existent qu'en HTTPS. En mode dégradé, l'administrateur se connecte avec mot de passe et application d'authentification, et CACHET l'affiche partout."
+    },
+    {
+      "key": "SOCLE_CLE",
+      "label": "Clé maîtresse",
+      "type": "secret",
+      "generate": "random:32",
+      "help": "Scelle les mots de passe des boîtes, les clés d'API, les secrets du webhook et de Telegram, et les secrets TOTP. Créée par le Hub, gardée dans son coffre, jamais sur le volume de CACHET."
+    },
+    {
+      "key": "SOCLE_CLE_ANCIENNE",
+      "label": "Clé maîtresse remplacée",
+      "type": "secret",
+      "advanced": true,
+      "help": "Pendant une rotation seulement : la clé actuelle ici, une neuve dans « Clé maîtresse », redéployer, puis vider ce champ."
+    },
+    {
+      "key": "SOCLE_JETON_INSTALLATION",
+      "label": "Jeton d'installation",
+      "type": "secret",
+      "advanced": true,
+      "help": "Vide : CACHET en tire un au premier démarrage et l'écrit dans ses journaux. Il ne sert qu'à créer le premier compte."
+    },
+    {
+      "key": "SOCLE_PROXYS",
+      "label": "Relais de confiance",
+      "type": "string",
+      "default": "172.16.0.0/12",
+      "advanced": true,
+      "help": "Plages (CIDR, séparées par des virgules) des relais autorisés à transmettre l'adresse du client : au moins celle du réseau du Hub. Vide : chaque requête semble venir du relais, et les débits se comptent pour tous à la fois."
+    },
+    {
+      "key": "SOCLE_ORIGINES",
+      "label": "Origines supplémentaires",
+      "type": "string",
+      "default": "",
+      "advanced": true,
+      "help": "Adresses complètes acceptées en plus de celle de la page, quand un relais réécrit l'hôte."
+    },
+    {
+      "key": "SOCLE_URL_PUBLIQUE",
+      "label": "Adresse publique (courriels)",
+      "type": "string",
+      "default": "",
+      "advanced": true,
+      "help": "Ex. https://cachet.exemple. Les liens des courriels d'alerte de sécurité en partent. Obligatoire avec un relais SMTP."
+    },
+    {
+      "key": "SOCLE_SMTP_HOTE",
+      "label": "Relais SMTP",
+      "type": "string",
+      "default": "",
+      "advanced": true,
+      "help": "Vide : les alertes de sécurité restent visibles dans CACHET, sans courriel."
+    },
+    {
+      "key": "SOCLE_SMTP_PORT",
+      "label": "Port SMTP",
+      "type": "number",
+      "min": 1,
+      "advanced": true,
+      "help": "Vide : 465 en TLS, 587 en STARTTLS."
+    },
+    {
+      "key": "SOCLE_SMTP_SECURITE",
+      "label": "Chiffrement SMTP",
+      "type": "select",
+      "default": "tls",
+      "advanced": true,
+      "options": [
+        {
+          "value": "tls",
+          "label": "TLS dès la connexion (465)"
+        },
+        {
+          "value": "starttls",
+          "label": "STARTTLS exigé (587)"
+        }
+      ]
+    },
+    {
+      "key": "SOCLE_SMTP_UTILISATEUR",
+      "label": "Identifiant SMTP",
+      "type": "string",
+      "default": "",
+      "advanced": true
+    },
+    {
+      "key": "SOCLE_SMTP_MOTDEPASSE",
+      "label": "Mot de passe SMTP",
+      "type": "secret",
+      "advanced": true
+    },
+    {
+      "key": "SOCLE_SMTP_DE",
+      "label": "Adresse d'expédition",
+      "type": "string",
+      "default": "",
+      "advanced": true
+    },
+    {
+      "key": "CACHET_ENVOIS_MINUTE",
+      "label": "Envois par minute",
+      "type": "number",
+      "default": 30,
+      "min": 1,
+      "advanced": true,
+      "help": "Plafond des courriels envoyés par minute, toutes clés confondues : une clé d'envoi volée ne fait pas de CACHET un relais de pourriel."
+    },
+    {
+      "key": "CACHET_SECRET_V1",
+      "label": "CACHET_SECRET de la 1.0",
+      "type": "secret",
+      "advanced": true,
+      "help": "Seulement pour reprendre une installation 1.0 (config.json et state.json dans le volume) : il rouvre les mots de passe des boîtes et les clés, rescellés sous la clé maîtresse. Inutile ensuite : vide-le."
+    }
+  ],
+  "api": {
+    "baseUrl": "{{service.url}}",
+    "auth": {
+      "type": "bearer",
+      "token": "{{service.token}}",
+      "localToken": "HUB_TOKEN",
+      "remoteToken": "HUB_TOKEN"
+    }
+  },
+  "capabilities": {
+    "provides": [
+      "tickets.source",
+      "alerts.source",
+      "mail.send"
+    ],
+    "requires": [],
+    "accepts": []
+  },
+  "triggers": [
+    {
+      "id": "ticket.created",
+      "name": "Nouveau ticket",
+      "description": "Une alerte reçue (ou un ticket créé à la main) vient d'ouvrir un ticket.",
+      "icon": "ticket",
+      "group": "Tickets",
+      "delivery": {
+        "type": "poll",
+        "request": {
+          "method": "GET",
+          "path": "/api/tickets",
+          "query": {
+            "limit": "100"
+          }
+        },
+        "interval": "30s",
+        "items": "$.tickets",
+        "dedupeKey": "$.id"
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "host": {
+            "type": "string"
+          },
+          "urgency": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "via": {
+            "type": "string"
+          },
+          "occurrences": {
+            "type": "number"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        }
+      },
+      "sample": {
+        "id": "TCK-0042",
+        "service": "supervision",
+        "subject": "Agent hors ligne sur srv01",
+        "host": "srv01",
+        "urgency": "haute",
+        "status": "nouveau",
+        "via": "supervision@exemple.fr",
+        "occurrences": 1,
+        "createdAt": "2026-10-23T08:12:00.000Z",
+        "updatedAt": "2026-10-23T08:12:00.000Z"
+      }
+    },
+    {
+      "id": "message.new",
+      "name": "Nouveau message",
+      "description": "Un message relevé que personne n'a encore traité, avec son service et son urgence déjà résolus.",
+      "icon": "mail",
+      "group": "Courrier",
+      "delivery": {
+        "type": "poll",
+        "request": {
+          "method": "GET",
+          "path": "/api/messages/detailed",
+          "query": {
+            "new": "1",
+            "limit": "100"
+          }
+        },
+        "interval": "1m",
+        "items": "$.messages",
+        "dedupeKey": "$.id"
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "receivedAt": {
+            "type": "string"
+          },
+          "alias": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          },
+          "urgency": {
+            "type": "string"
+          },
+          "host": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "sample": {
+        "id": "5f0c…:12",
+        "receivedAt": "2026-10-23T08:12:00.000Z",
+        "alias": "supervision@exemple.fr",
+        "service": "supervision",
+        "urgency": "haute",
+        "host": "srv01",
+        "from": "noreply@exemple.fr",
+        "subject": "Agent hors ligne sur srv01",
+        "text": "Machine : srv01"
+      }
+    }
+  ],
+  "actions": [
+    {
+      "id": "summary",
+      "name": "État de CACHET",
+      "description": "Tickets ouverts et critiques, messages non lus, boîtes en erreur, dernière relève.",
+      "icon": "chart",
+      "group": "Tickets",
+      "capability": "tickets.source",
+      "risk": "read",
+      "idempotent": true,
+      "params": [],
+      "request": {
+        "method": "GET",
+        "path": "/api/summary"
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "tickets_ouverts": {
+            "type": "number"
+          },
+          "tickets_critiques": {
+            "type": "number"
+          },
+          "messages_non_lus": {
+            "type": "number"
+          },
+          "boites": {
+            "type": "number"
+          },
+          "boites_en_erreur": {
+            "type": "number"
+          },
+          "derniere_releve": {
+            "type": "string"
+          }
+        }
+      },
+      "sample": {
+        "tickets_ouverts": 3,
+        "tickets_critiques": 1,
+        "messages_non_lus": 2,
+        "boites": 1,
+        "boites_en_erreur": 0,
+        "derniere_releve": "2026-10-23T08:12:00.000Z"
+      }
+    },
+    {
+      "id": "ticket.create",
+      "name": "Ouvrir un ticket",
+      "description": "Crée un ticket à la main (service, objet, machine, urgence).",
+      "icon": "ticket",
+      "group": "Tickets",
+      "risk": "reversible",
+      "params": [
+        {
+          "key": "subject",
+          "label": "Objet",
+          "type": "expression",
+          "required": true
+        },
+        {
+          "key": "service",
+          "label": "Service",
+          "type": "expression"
+        },
+        {
+          "key": "host",
+          "label": "Machine",
+          "type": "expression"
+        },
+        {
+          "key": "urgency",
+          "label": "Urgence",
+          "type": "select",
+          "default": "normale",
+          "options": [
+            {
+              "value": "basse",
+              "label": "Basse"
+            },
+            {
+              "value": "normale",
+              "label": "Normale"
+            },
+            {
+              "value": "haute",
+              "label": "Haute"
+            },
+            {
+              "value": "crit",
+              "label": "Critique"
+            }
+          ]
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "path": "/api/tickets",
+        "body": {
+          "subject": "{{params.subject}}",
+          "service": "{{params.service}}",
+          "host": "{{params.host}}",
+          "urgency": "{{params.urgency}}"
+        }
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "host": {
+            "type": "string"
+          },
+          "urgency": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "via": {
+            "type": "string"
+          },
+          "occurrences": {
+            "type": "number"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        }
+      },
+      "sample": {
+        "id": "TCK-0042",
+        "service": "supervision",
+        "subject": "Agent hors ligne sur srv01",
+        "host": "srv01",
+        "urgency": "haute",
+        "status": "nouveau",
+        "via": "supervision@exemple.fr",
+        "occurrences": 1,
+        "createdAt": "2026-10-23T08:12:00.000Z",
+        "updatedAt": "2026-10-23T08:12:00.000Z"
+      }
+    },
+    {
+      "id": "ticket.status",
+      "name": "Changer le statut d'un ticket",
+      "description": "Nouveau, en cours ou traité ; le changement est historisé.",
+      "icon": "check",
+      "group": "Tickets",
+      "risk": "reversible",
+      "idempotent": true,
+      "params": [
+        {
+          "key": "id",
+          "label": "Ticket",
+          "type": "expression",
+          "required": true
+        },
+        {
+          "key": "status",
+          "label": "Statut",
+          "type": "select",
+          "default": "cours",
+          "options": [
+            {
+              "value": "nouveau",
+              "label": "Nouveau"
+            },
+            {
+              "value": "cours",
+              "label": "En cours"
+            },
+            {
+              "value": "traite",
+              "label": "Traité"
+            }
+          ]
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "path": "/api/tickets/{{params.id}}",
+        "body": {
+          "status": "{{params.status}}"
+        }
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "host": {
+            "type": "string"
+          },
+          "urgency": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "via": {
+            "type": "string"
+          },
+          "occurrences": {
+            "type": "number"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        }
+      },
+      "sample": {
+        "id": "TCK-0042",
+        "service": "supervision",
+        "subject": "Agent hors ligne sur srv01",
+        "host": "srv01",
+        "urgency": "haute",
+        "status": "cours",
+        "via": "supervision@exemple.fr",
+        "occurrences": 1,
+        "createdAt": "2026-10-23T08:12:00.000Z",
+        "updatedAt": "2026-10-23T08:12:00.000Z"
+      }
+    },
+    {
+      "id": "mail.send",
+      "name": "Envoyer un courriel",
+      "description": "Depuis une boîte ou un de ses alias autorisés à l'envoi, par le SMTP de la boîte.",
+      "icon": "mail",
+      "group": "Courrier",
+      "capability": "mail.send",
+      "risk": "destructive",
+      "params": [
+        {
+          "key": "from",
+          "label": "Expéditeur",
+          "type": "expression",
+          "required": true
+        },
+        {
+          "key": "to",
+          "label": "Destinataires",
+          "type": "expression",
+          "required": true
+        },
+        {
+          "key": "subject",
+          "label": "Objet",
+          "type": "expression",
+          "required": true
+        },
+        {
+          "key": "text",
+          "label": "Texte",
+          "type": "expression"
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "path": "/api/send",
+        "body": {
+          "from": "{{params.from}}",
+          "to": "{{params.to}}",
+          "subject": "{{params.subject}}",
+          "text": "{{params.text}}"
+        }
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "messageId": {
+            "type": "string"
+          }
+        }
+      },
+      "sample": {
+        "ok": true,
+        "messageId": "<a1b2c3@exemple.fr>"
+      }
+    },
+    {
+      "id": "poll",
+      "name": "Relever maintenant",
+      "description": "Relève toutes les boîtes sans attendre la prochaine échéance.",
+      "icon": "refresh",
+      "group": "Courrier",
+      "risk": "read",
+      "idempotent": true,
+      "params": [],
+      "request": {
+        "method": "POST",
+        "path": "/api/poll",
+        "body": {}
+      },
+      "output": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "fetched": {
+            "type": "number"
+          },
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "sample": {
+        "ok": true,
+        "fetched": 2,
+        "error": null
+      }
+    }
+  ],
+  "probes": [
+    {
+      "id": "reachable",
+      "name": "Joignable",
+      "kind": "state",
+      "request": {
+        "method": "GET",
+        "path": "/api/health"
+      },
+      "value": "$.ok",
+      "states": {
+        "ok": [
+          true,
+          "true",
+          "ok"
+        ]
+      },
+      "interval": "30s"
+    },
+    {
+      "id": "open",
+      "name": "Tickets ouverts",
+      "kind": "gauge",
+      "unit": "tickets",
+      "request": {
+        "method": "GET",
+        "path": "/api/summary"
+      },
+      "value": "$.tickets_ouverts",
+      "interval": "1m"
+    },
+    {
+      "id": "critical",
+      "name": "Tickets critiques",
+      "kind": "gauge",
+      "unit": "tickets",
+      "request": {
+        "method": "GET",
+        "path": "/api/summary"
+      },
+      "value": "$.tickets_critiques",
+      "thresholds": {
+        "warn": 1,
+        "crit": 3
+      },
+      "interval": "1m"
+    },
+    {
+      "id": "boxes-failing",
+      "name": "Boîtes en erreur",
+      "kind": "gauge",
+      "unit": "boîtes",
+      "request": {
+        "method": "GET",
+        "path": "/api/summary"
+      },
+      "value": "$.boites_en_erreur",
+      "thresholds": {
+        "warn": 1,
+        "crit": 1
+      },
+      "interval": "5m"
+    }
+  ],
+  "permissions": {
+    "dockerSocket": "none",
+    "privileged": false,
+    "hostNetwork": false,
+    "capAdd": [],
+    "egress": []
+  },
+  "accounts": {
+    "tokenKey": "HUB_ADMIN_TOKEN",
+    "roles": [
+      "admin",
+      "membre",
+      "lecture"
+    ],
+    "adminRole": "admin",
+    "invitation": true,
+    "fields": {
+      "id": "$.id",
+      "name": "$.identifiant",
+      "role": "$.role",
+      "mfa": "$.a2f",
+      "created": "$.cree",
+      "lastSeen": "$.derniere"
+    },
+    "list": {
+      "method": "GET",
+      "path": "/api/compte/hub/comptes"
+    },
+    "create": {
+      "method": "POST",
+      "path": "/api/compte/hub/comptes",
+      "body": {
+        "identifiant": "{{params.username}}",
+        "role": "{{params.role}}"
+      }
+    },
+    "update": {
+      "method": "PATCH",
+      "path": "/api/compte/hub/comptes/{{params.id}}",
+      "body": {
+        "role": "{{params.role}}"
+      }
+    },
+    "reset": {
+      "method": "POST",
+      "path": "/api/compte/hub/comptes/{{params.id}}/reinit",
+      "body": {}
+    },
+    "remove": {
+      "method": "DELETE",
+      "path": "/api/compte/hub/comptes/{{params.id}}"
+    }
+  },
+  "ai": {
+    "exposeActions": true,
+    "hints": "CACHET relève les boîtes d'alertes : chaque alias d'une boîte à tickets désigne un service et une urgence par défaut, les mots-clés ne font que la monter. « État de CACHET » d'abord ; un envoi de courriel part vraiment et passe par une validation humaine. Les boîtes, les règles et les clés se règlent dans CACHET, par une personne."
+  }
+}
