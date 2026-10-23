@@ -386,6 +386,16 @@ await t('la relève transforme les alertes en tickets', async () => {
   assert.equal(c.urgency, 'crit');
   assert.equal(c.host, 'srv01');
 });
+await t('numéros de ticket et identifiants de message tirés au hasard, jamais suivis', async () => {
+  const s = (await admin.get('/api/state')).json;
+  for (const t of s.tickets) assert.match(t.id, /^TCK-[0-9A-HJKMNP-TV-Z]{6}$/);
+  for (const m of s.messages.filter(x => !x.sent)) {
+    assert.match(m.id, /^m-[\w-]{16}$/);
+  }
+  const cree = await admin.post('/api/tickets', { subject: 'à la main' });
+  assert.match(cree.json.id, /^TCK-[0-9A-HJKMNP-TV-Z]{6}$/);
+  await admin.del('/api/tickets/' + cree.json.id);
+});
 await t('une seconde relève ne rejoue pas les mêmes messages', async () => {
   const r = await admin.post('/api/poll');
   assert.equal(r.json.fetched, 0);

@@ -218,6 +218,8 @@ Ce qui change :
   connexion suivante ; une boîte « sans TLS » passe en STARTTLS exigé ;
 - les clés d'API ne gèrent plus les boîtes, les règles ni les réglages ;
 - les messages envoyés suivent la même durée de garde que les autres.
+- les nouveaux tickets portent un numéro tiré au hasard (`TCK-7K3Q9X`), qui ne
+  se devine pas et ne dit rien du volume d'alertes ; ceux de la 1.0 gardent le leur.
 
 ## Sauvegarde
 
