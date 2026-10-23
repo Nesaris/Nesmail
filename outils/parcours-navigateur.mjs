@@ -156,6 +156,13 @@ if (!(await page.locator('#rConds .cond select option[selected]').count())) erre
 await controle(page, 'feuille-regle');
 await page.keyboard.press('Escape');
 
+// Envoyés puis Courrier : la page revient à toutes les boîtes, titre et texte compris.
+await page.locator('.side').getByRole('button', { name: /^Envoyés/ }).click();
+await page.getByRole('heading', { name: 'Envoyés', exact: true }).first().waitFor();
+await page.locator('.side').getByRole('button', { name: /^Courrier/ }).click();
+if ((await page.locator('#mailTitle').textContent()) !== 'Courrier') erreurs.push('Courrier reste sur Envoyés');
+if (/envoyés/i.test(await page.locator('#mailLede').textContent())) erreurs.push('texte d’Envoyés resté sur Courrier');
+
 const defauts = rapport.filter(r => r.defauts.length);
 fs.writeFileSync(`${sortie}/rapport.json`, JSON.stringify({ defauts, erreurs }, null, 2));
 console.log(`${rapport.length} contrôles, ${defauts.length} avec défauts, ${erreurs.length} erreur(s) de console`);

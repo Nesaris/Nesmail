@@ -139,7 +139,12 @@ function aller(page, bouton) {
   if (page === 'securite') $('p-securite').replaceChildren(pageSecurite(socle, { service: 'CACHET', confidentialite: '/confidentialite.txt' }));
   window.scrollTo(0, 0);
 }
-document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => aller(b.dataset.go, b)));
+document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => {
+  // « Courrier » revient à toutes les boîtes, même depuis Envoyés ou un dossier.
+  if (b.dataset.go === 'mail') { view.folder = 'all'; view.sel2 = 0; }
+  aller(b.dataset.go, b);
+  if (b.dataset.go === 'mail') { renderFolders(); renderMailPage(); }
+}));
 $('navSent').onclick = () => {
   view.folder = '__sent'; view.mailAcct = 'all'; view.sel2 = 0;
   aller('mail', $('navSent'));
@@ -283,6 +288,9 @@ function renderMailPage() {
 
   const nom = envoyes ? 'Envoyés' : (view.folder === 'all' ? null : folderName(view.folder));
   $('mailTitle').textContent = nom || 'Courrier';
+  $('mailLede').textContent = envoyes ? 'Les messages envoyés depuis Cachet, gardés aussi longtemps que le reste du courrier.'
+    : view.folder !== 'all' ? 'Les messages rangés dans ce dossier, à la main ou par une règle.'
+    : 'Les boîtes réglées en usage « courrier ». Rien n’y devient un ticket automatiquement.';
   $('mailListTitle').textContent = nom || (view.mailAcct === 'all' ? 'Toutes les boîtes'
     : (S.accounts.find(a => a.id === view.mailAcct) || {}).addr || '');
   $('mailNote').textContent = `${items.length} message${items.length > 1 ? 's' : ''}`;
