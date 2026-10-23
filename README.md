@@ -4,7 +4,9 @@ Boîte d'arrivée des alertes et suivi des tickets. Relève une ou plusieurs bo�
 IMAP, transforme chaque alerte en ticket structuré (service, machine, urgence),
 et répond depuis la bonne adresse.
 
-Node 20+, **aucune dépendance npm**. Clients IMAP et SMTP écrits à la main.
+Node 24, **aucune dépendance npm**. Clients IMAP et SMTP écrits à la main.
+Comptes, sessions, second facteur, clés d'accès et thèmes viennent du socle
+commun, embarqué dans `socle/` avec ses essais.
 
 ---
 
@@ -31,57 +33,72 @@ second.
 
 ---
 
-## Démarrage
+## Installation par le Hub
+
+CACHET est une extension du Hub : **Extensions → CACHET → Installer**. Le Hub
+crée la clé maîtresse, le jeton de service et le jeton d'administration des
+comptes, les garde dans son coffre, et construit l'image depuis ce dépôt si elle
+n'est pas publiée. Le premier compte se crée depuis **Comptes des services**.
+
+L'apparence suit la page **Thème** du Hub : SOMA, Console, Exploitation ou
+Lavande, pour tous les services ou pour CACHET seul. Clair ou sombre se règle
+dans CACHET, avec le bouton de l'en-tête.
+
+## Installation seule
 
 ```bash
+mkdir -p secrets && openssl rand -base64 32 > secrets/socle_cle && chmod 600 secrets/socle_cle
 cp .env.example .env
-echo "CACHET_SECRET=$(openssl rand -hex 32)" >> .env
-docker compose up -d
-docker compose logs -f cachet     # le mot de passe de première connexion s'affiche ici
+docker compose up -d --build
+docker compose logs cachet | grep "Jeton d'installation"
 ```
 
-Puis `http://127.0.0.1:8787`, et dans **Comptes → Ajouter une boîte** :
+Puis l'adresse de CACHET, servie en HTTPS par un relais (Caddy, Traefik,
+Relay…), le jeton d'installation, et le premier compte : identifiant, mot de
+passe, clé d'accès, codes de secours. Les comptes suivants s'invitent depuis
+**Comptes**.
 
-- l'adresse de la boîte de collecte, usage **Boîte à tickets**
-- les serveurs IMAP et SMTP de votre fournisseur
-- un alias par service, avec son urgence par défaut et son droit d'envoi
-- **Tester** avant d'enregistrer : la connexion est réellement vérifiée
+La clé maîtresse (`secrets/socle_cle`) scelle les mots de passe des boîtes, les
+clés d'API et les secrets TOTP : sans elle, une sauvegarde de la base ne rouvre
+rien. Gardez-en une copie ailleurs que sur la machine.
 
-### Sans Docker
-
-```bash
-export CACHET_SECRET=$(openssl rand -hex 32)
-node server.js
-```
+Sans HTTPS, sur un réseau de confiance seulement : `SOCLE_HTTP=1` (mode
+dégradé, affiché partout ; pas de clés d'accès, mot de passe et application
+d'authentification pour l'administrateur).
 
 ### Variables
 
 | variable | rôle |
 |---|---|
-| `CACHET_SECRET` | **obligatoire**. Chiffre les secrets stockés et signe les sessions. Le changer rend illisibles les mots de passe déjà enregistrés. |
-| `CACHET_PASSWORD` | mot de passe de première connexion. Sinon généré et affiché au démarrage. |
-| `CACHET_TOTP_SECRET` | second facteur. `node totp-setup.js` génère le secret et l'URI à scanner. |
-| `CACHET_BIND`, `CACHET_PORT` | adresse et port publiés sur l'hôte. Le port interne reste 8787. |
-| `CACHET_DATA` | dossier des données. `/data` dans l'image. |
-| `CACHET_INSECURE_COOKIE=1` | à ne mettre **que** pour un accès en HTTP sans TLS. |
+| `SOCLE_CLE` / `SOCLE_CLE_FILE` | clé maîtresse, 32 octets en base64. **Obligatoire hors Hub** (sinon tirée dans le volume, à côté de ce qu'elle scelle). |
+| `SOCLE_HTTP` | `1` : mode dégradé sans HTTPS. |
+| `SOCLE_PROXYS` | relais autorisés à transmettre l'adresse du client (CIDR). |
+| `SOCLE_URL_PUBLIQUE`, `SOCLE_SMTP_*` | alertes de sécurité des comptes par courriel. |
+| `SOCLE_THEME` | `soma`, `console`, `exploitation` ou `lavande`. |
+| `CACHET_HUB_TOKEN` | jeton de service du Hub. |
+| `CACHET_ENVOIS_MINUTE` | envois par minute, toutes clés confondues (30). |
+| `CACHET_SECRET_V1` | reprise d'une 1.0 seulement (voir plus bas). |
+| `CACHET_DATA`, `PORT` | dossier des données (`/data`) et port interne (8787). |
 
 ---
 
-## Exposition
+## Les boîtes
 
-Le compose n'ouvre le port que sur `127.0.0.1` : rien n'est joignable depuis le
-réseau par défaut. Pour publier derrière un proxy sur une autre machine, passez
-`CACHET_BIND=0.0.0.0` et filtrez le port au pare-feu.
+**Boîtes → Ajouter une boîte** :
 
-Servez en HTTPS. Le cookie de session est `Secure` : sur du HTTP en clair, le
-navigateur ne le renverra jamais et la connexion tournera en boucle. L'écran de
-connexion le dit explicitement quand le cas se produit.
+- l'adresse de la boîte de collecte, usage **Boîte à tickets** ;
+- les serveurs IMAP et SMTP de votre fournisseur ;
+- un alias par service, avec son urgence par défaut et son droit d'envoi ;
+- **Tester** : la connexion est réellement vérifiée.
 
-Si le proxy tourne dans un conteneur voisin, le plus propre est de les mettre
-sur un réseau Docker commun et de viser `cachet:8787` : le port n'a alors plus
-besoin d'être publié du tout.
+Le chiffrement n'est jamais facultatif : IMAP en TLS implicite (993) ou en
+STARTTLS exigé (143), SMTP en TLS implicite (465) ou en STARTTLS exigé (587).
+Un serveur qui ne propose pas STARTTLS ne reçoit ni mot de passe ni message.
 
----
+Le certificat du serveur est vérifié par les autorités reconnues. Pour un
+serveur auto-signé (Proton Bridge, serveur maison), **Tester** affiche
+l'empreinte SHA-256 qu'il présente : vérifiez-la sur la machine, puis
+**Épingler** ; seul ce certificat sera accepté ensuite.
 
 ## Règles de tri
 
@@ -90,41 +107,47 @@ création du ticket.
 
 Conditions sur l'expéditeur, le destinataire, l'objet, le corps, la boîte,
 l'alias visé ou n'importe où. Opérateurs : contient, ne contient pas, est
-exactement, commence par, finit par, expression régulière. Plusieurs conditions,
+exactement, commence par, finit par, expression régulière (200 caractères au
+plus, sans quantificateur imbriqué ni référence arrière). Plusieurs conditions,
 en mode « toutes remplies » ou « au moins une ». La comparaison ignore la casse
 et les accents.
 
 Actions : ranger dans un dossier, marquer lu ou non lu, forcer ou empêcher la
 création du ticket, imposer une urgence ou un service, supprimer le message,
-ou arrêter là pour que les règles suivantes ne s'appliquent pas.
+ou arrêter là.
 
 **Essayer à blanc** passe la règle sur les 200 derniers messages et dit combien
-elle aurait touchés, sans rien modifier. À utiliser systématiquement avant
-d'activer une règle qui supprime : une suppression ne laisse qu'une ligne de
-journal.
+elle aurait touchés, sans rien modifier.
 
 ---
+
+## Comptes et rôles
+
+| rôle | peut |
+|---|---|
+| lecture | tout voir |
+| membre | traiter : tickets, dossiers, relève, accusés de réception, envoi |
+| administrateur | régler : boîtes, règles, réglages, clés d'API, webhook, comptes |
+
+Supprimer une boîte, régénérer une clé, changer l'adresse du webhook ou le jeton
+Telegram demandent une confirmation récente de son identité ; lire une clé
+d'API aussi.
 
 ## Liaison avec un service externe
 
 **Réglages → Liaison avec un service externe.** Deux clés distinctes :
 
-- **la clé complète** (`pk_…`) ouvre toute l'API ;
+- **la clé complète** (`pk_…`) lit et traite le courrier et les tickets, et envoie ;
 - **la clé d'envoi** (`sk_…`) n'ouvre que `POST /api/send`.
 
-Distribuez la clé d'envoi à vos services : un service compromis ne peut alors ni
-lire vos tickets ni toucher aux comptes. Aucune des deux clés ne permet de lire
-les clés elles-mêmes, cela exige une session.
+Aucune clé n'ouvre les boîtes, les règles, les réglages ni les clés : cela
+demande une personne connectée. Les deux s'envoient en en-tête `X-Cachet-Key`
+ou en `Authorization: Bearer`. Le jeton de service du Hub vaut la clé complète.
 
-Les deux s'envoient en en-tête `X-Cachet-Key` ou en `Authorization: Bearer`.
-
-Les **origines autorisées** ne servent que si un front appelle Cachet depuis le
-navigateur. Un service qui appelle depuis son propre serveur n'a rien à déclarer.
+Les **origines autorisées** ne servent que si un front appelle CACHET depuis le
+navigateur, avec une clé (jamais avec une session) ; `*` est refusé.
 
 ### Webhook sortant
-
-Plutôt que de faire interroger Cachet en boucle, laissez Cachet appeler votre
-service.
 
 ```
 POST <votre url>
@@ -135,17 +158,28 @@ X-Cachet-Signature: sha256=<hmac du corps>
 ```
 
 Événements : `ticket.created`, `ticket.repeated` (dédoublonnage),
-`ticket.updated` et `ticket.test`.
+`ticket.updated` et `ticket.test`. Adresse en `http://` ou `https://`,
+redirections jamais suivies.
 
-La signature est un HMAC SHA-256 du corps brut avec le secret partagé. Côté
-destinataire, recalculez-la sur le corps reçu et comparez en temps constant :
-c'est ce qui distingue un vrai appel d'un tiers qui connaîtrait l'URL.
+### Routes
 
----
+| méthode | route | effet |
+|---|---|---|
+| GET | `/api/health` | répond, sans rien dire d'autre (publique) |
+| GET | `/api/summary` | tickets ouverts et critiques, non lus, boîtes en erreur |
+| GET | `/api/tickets` | filtres `status`, `service`, `urgency`, `since`, `limit` |
+| POST | `/api/tickets` | créer un ticket |
+| PATCH | `/api/tickets/:id` | statut, urgence, notes |
+| GET | `/api/messages/detailed` | messages avec service et urgence résolus (`new=1`, `since`) |
+| POST | `/api/ack` | accuser réception de messages |
+| GET | `/api/aliases` | alias et services déclarés |
+| POST | `/api/send` | envoyer · clé d'envoi suffisante |
 
-## Faire envoyer vos services vers Cachet
+`GET /api` liste toutes les routes. Un client peut ranger ses appels sous son
+propre préfixe (`/api/monservice/tickets`) : la route équivalente répond, avec
+les mêmes droits.
 
-Vos services n'ont besoin que de l'URL et de la clé d'envoi :
+## Faire envoyer vos services vers CACHET
 
 ```
 POST https://cachet.exemple.fr/api/send
@@ -156,80 +190,69 @@ X-Cachet-Key: sk_...
   "text": "Machine : srv01\n…" }
 ```
 
-Deux conventions qui pilotent la détection :
-
 - une ligne `Machine : <hôte ou IP>` dans le corps devient la cible du ticket ;
-- l'objet doit être **stable** pour un même incident, c'est lui qui sert au
-  dédoublonnage. Horodatages et compteurs vont dans le corps, pas dans l'objet.
+- l'objet doit être **stable** pour un même incident : c'est lui qui sert au
+  dédoublonnage. Horodatages et compteurs vont dans le corps.
 
 ---
 
-## Ce que ça fait, ce que ça ne fait pas
+## Reprendre une 1.0
 
-Fait :
+Arrêtez la 1.0, gardez son volume, et démarrez la 2.0 sur ce volume avec
+`CACHET_SECRET_V1` = l'ancien `CACHET_SECRET` (dans le Hub : réglages avancés,
+« CACHET_SECRET de la 1.0 »). Au premier démarrage, CACHET reprend les boîtes,
+les alias, les dossiers, les règles, les réglages, le courrier et les tickets ;
+les mots de passe des boîtes et les clés d'API (inchangées : vos services
+gardent l'accès) sont rescellés sous la clé maîtresse. `config.json` et
+`state.json` sont renommés en `*.v1-reprise-<date>` : supprimez-les une fois la
+reprise vérifiée, puis videz `CACHET_SECRET_V1`.
 
-- IMAP en TLS implicite (993), relève incrémentale par UID, marquage `\Seen`
-- décodage MIME : multipart, base64, quoted-printable, en-têtes RFC 2047
-- rendu HTML des messages, nettoyé par liste blanche : mise en forme et liens
-  conservés, scripts, attributs d'événement et images distantes retirés
-- SMTP en STARTTLS (587) ou TLS implicite (465), `AUTH PLAIN` et `AUTH LOGIN`
-- tickets : service depuis l'alias, escalade d'urgence, dédoublonnage, historique
-- règles de tri, dossiers locaux, boîte d'envoi, notification Telegram
-- secrets chiffrés en AES-256-GCM au repos, sessions en cookie signé HMAC,
-  TOTP optionnel, limitation des essais de connexion
-- purge automatique des tickets traités au-delà de la rétention
+Ce qui change :
 
-Pas fait, volontairement :
-
-- **STARTTLS en IMAP sur le port 143.** Seul le 993 est géré.
-- **OAuth2.** Mot de passe d'application uniquement.
-- **Pièces jointes.** Le corps est extrait, les fichiers sont ignorés.
-- **Dossiers IMAP multiples.** Un dossier relevé par compte, `INBOX` par défaut.
-- **Dossiers de rangement côté serveur.** Les dossiers sont locaux à Cachet :
-  ranger un message ici ne le déplace pas chez le fournisseur. Des étiquettes
-  locales se désynchroniseraient dès qu'on touche la boîte depuis le webmail.
-
----
-
-## Le premier message ne remonte pas ?
-
-À la toute première relève, Cachet ne prend que les messages **non lus**, pour ne
-pas rejouer tout l'historique de la boîte et ouvrir cinquante tickets d'un coup.
-Si vous avez ouvert l'alerte dans le webmail avant, elle est déjà marquée lue et
-sera ignorée. Deux solutions : la remettre en non lu, ou utiliser **Relever
-depuis zéro** (clic droit sur la ligne du compte).
-
-Le clic droit est partout : sur un message pour le ranger, le marquer ou le
-supprimer, sur une ligne de compte pour tester, relever ou purger, sur un
-dossier ou une règle pour les supprimer.
-
----
-
-## Changer le mot de passe
-
-```bash
-./passwd.sh
-```
-
-Saisie masquée et confirmée, rien ne passe par l'historique du shell.
-
-## Tests
-
-```bash
-node test/run.js
-```
-
-57 tests contre de faux serveurs IMAP et SMTP : décodage MIME, nettoyage HTML,
-dialogue IMAP, escalade et dédoublonnage, règles, refus SMTP, portée des clés,
-CORS, signature du webhook, chiffrement sur disque, API complète. Le TOTP est
-vérifié contre les vecteurs publiés de la RFC 6238.
+- le mot de passe unique disparaît : le premier compte se crée par le jeton
+  d'installation (ou depuis le Hub) ;
+- une boîte réglée en « accepter un auto-signé » épingle le certificat vu à la
+  connexion suivante ; une boîte « sans TLS » passe en STARTTLS exigé ;
+- les clés d'API ne gèrent plus les boîtes, les règles ni les réglages ;
+- les messages envoyés suivent la même durée de garde que les autres.
 
 ## Sauvegarde
 
-Tout est dans le volume `cachet-data` : `config.json` (comptes, alias, règles,
-secrets chiffrés) et `state.json` (messages, tickets, journal). Sans
-`CACHET_SECRET`, une sauvegarde de `config.json` est inexploitable — gardez le
-secret ailleurs que dans la sauvegarde.
+```bash
+docker exec -i cachet node lib/cli.js sauvegarde < sauvegarde.pub > cachet.sauv
+node lib/cli.js restaurer sauvegarde.pem cachet.db < cachet.sauv   # ailleurs
+```
+
+Tout est dans `cachet.db` (volume `/data`) : comptes, boîtes, règles, courrier,
+tickets, journal. La sauvegarde est chiffrée pour une clé publique RSA dont la
+clé privée ne vit pas sur la machine ; elle garde les secrets scellés sous la
+clé maîtresse, à sauvegarder à part.
+
+## Ce que ça fait, ce que ça ne fait pas
+
+Fait : relève incrémentale par UID, MIME (multipart, base64, quoted-printable,
+RFC 2047, en-têtes UTF-8), HTML nettoyé par liste blanche côté serveur puis
+reconstruit côté navigateur, images distantes jamais chargées ; tickets,
+escalade, dédoublonnage, historique ; règles, dossiers locaux, envoi, Telegram,
+webhook signé ; purge à la rétention.
+
+Pas fait, volontairement : OAuth2 (mot de passe d'application), pièces jointes
+(le corps seul est extrait), plusieurs dossiers IMAP par boîte, dossiers côté
+serveur (les dossiers sont locaux à CACHET).
+
+## Le premier message ne remonte pas ?
+
+À la toute première relève, CACHET ne prend que les messages **non lus**, pour
+ne pas rejouer tout l'historique. **Relever depuis zéro** (clic droit sur la
+ligne de la boîte) reprend les vingt derniers.
+
+## Essais
+
+```bash
+node test/run.js                       # CACHET (faux serveurs IMAP et SMTP, TLS réel)
+node --test socle/test/                # le socle embarqué
+node outils/parcours-navigateur.mjs    # chaque écran, chaque gamme, chaque largeur (Playwright)
+```
 
 ---
 
