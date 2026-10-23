@@ -4,7 +4,10 @@
 //   - deux éléments de contenu qui se recouvrent (ni l'un ni l'autre ne
 //     contenant l'autre), dans la même couche d'empilement ;
 //   - un texte qui déborde de sa boîte sans être coupé proprement ;
-//   - une page ou une zone de travail plus large que l'écran.
+//   - une page ou une zone de travail plus large que l'écran ;
+//   - deux cartes voisines collées (moins de 8 px entre elles), ou côte à côte
+//     sans partir de la même ligne ni finir à la même (une rangée de cartes
+//     s'aligne en haut et en bas).
 export function chevauchements() {
   const defauts = [];
   const vw = document.documentElement.clientWidth;
@@ -154,6 +157,42 @@ export function chevauchements() {
     const s = getComputedStyle(el);
     const coupe = s.textOverflow === 'ellipsis' || s.overflowX === 'hidden' || s.overflowX === 'auto' || s.overflowX === 'scroll';
     if (!coupe && el.scrollWidth > el.clientWidth + 2 && s.display !== 'inline') defauts.push({ type: 'texte-deborde', detail: `${nom(el)} ${el.scrollWidth} > ${el.clientWidth}` });
+  }
+  // Cartes : un fond ou un bord, des coins arrondis, une vraie taille. Chacune
+  // est comparée à ses voisines du même cadre (la carte qui les contient, ou
+  // la page), dans la même couche.
+  const estCarte = el => {
+    const s = getComputedStyle(el);
+    if (!/^(block|flex|grid|flow-root)$/.test(s.display) || s.position === 'absolute' || s.position === 'fixed') return false;
+    const fond = s.backgroundColor !== 'rgba(0, 0, 0, 0)' && s.backgroundColor !== 'transparent';
+    const bord = parseFloat(s.borderTopWidth) > 0 && s.borderTopStyle !== 'none';
+    const r = el.getBoundingClientRect();
+    return (fond || bord) && parseFloat(s.borderTopLeftRadius) >= 6 && r.width >= 120 && r.height >= 40;
+  };
+  const cartes = [...document.querySelectorAll('body *')].filter(el => !el.closest('svg,math,.menu,.toast,dialog,[role=dialog]') && estCarte(el) && visible(el));
+  const cadreDe = el => { for (let e = el.parentElement; e; e = e.parentElement) if (cartes.includes(e)) return e; return null; };
+  const groupes = new Map();
+  for (const el of cartes) { const k = cadreDe(el); if (!groupes.has(k)) groupes.set(k, []); groupes.get(k).push(el); }
+  for (const liste of groupes.values()) {
+    for (let i = 0; i < liste.length; i++) {
+      for (let j = i + 1; j < liste.length; j++) {
+        const a = liste[i], b = liste[j];
+        if (couche(a) !== couche(b)) continue;
+        const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+        const largeurCommune = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
+        const hauteurCommune = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
+        // L'une sous l'autre : au moins 8 px entre les deux.
+        if (largeurCommune > Math.min(ra.width, rb.width) / 2) {
+          const ecart = ra.top < rb.top ? rb.top - ra.bottom : ra.top - rb.bottom;
+          if (ecart >= -1 && ecart < 8) defauts.push({ type: 'cartes-collees', detail: `${nom(a).slice(0, 40)} / ${nom(b).slice(0, 40)} : ${Math.round(ecart)} px` });
+        }
+        // Côte à côte dans le même conteneur : même haut, même bas.
+        if (hauteurCommune > Math.min(ra.height, rb.height) / 2 && a.parentElement === b.parentElement) {
+          const haut = Math.abs(ra.top - rb.top), bas = Math.abs(ra.bottom - rb.bottom);
+          if (haut > 1 || bas > 1) defauts.push({ type: 'rangee-desalignee', detail: `${nom(a).slice(0, 40)} / ${nom(b).slice(0, 40)} : haut ${Math.round(haut)} px, bas ${Math.round(bas)} px` });
+        }
+      }
+    }
   }
   return defauts;
 }

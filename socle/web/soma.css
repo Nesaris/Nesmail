@@ -322,7 +322,7 @@ svg.i{display:block;flex:none;stroke:currentColor;fill:none;stroke-linecap:round
 .fig .delta.pos{color:var(--accent)}
 .fig .chart{margin:8px -17px -12px;display:block;width:calc(100% + 34px);height:46px}
 
-.split{display:grid;grid-template-columns:minmax(0,1.42fr) minmax(0,1fr);gap:16px;align-items:start}
+.split{display:grid;grid-template-columns:minmax(0,1.42fr) minmax(0,1fr);gap:16px;align-items:stretch}
 /* Deux colonnes de cartes qui s'empilent chacune à sa hauteur : jamais de vide
  * sous une carte courte parce que sa voisine est longue (une ligne de .split
  * prend la hauteur de la plus haute). */
