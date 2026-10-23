@@ -172,14 +172,12 @@
         <div class="body">
           <div class="champ mono"><label>Adresse de l'API</label><input id="apiBase" readonly></div>
           <div class="duo">
-            <div class="champ mono"><label>Clé complète · en-tête X-Cachet-Key</label><input id="apiKey" readonly></div>
-            <div class="champ mono"><label>Clé d'envoi · POST /api/send seulement</label><input id="apiSendKey" readonly></div>
+            <div class="champ mono"><label>Clé complète · en-tête X-Cachet-Key</label><input id="apiKey" readonly>
+              <button class="btn sm cle-creer" type="button" id="apiRotate" data-admin>Créer la clé complète</button></div>
+            <div class="champ mono"><label>Clé d'envoi · POST /api/send seulement</label><input id="apiSendKey" readonly>
+              <button class="btn sm cle-creer" type="button" id="apiRotateSend" data-admin>Créer la clé d'envoi</button></div>
           </div>
           <p class="aide remonte">CACHET ne garde que l'empreinte d'une clé : elle se voit une fois, à sa création. Une clé perdue se régénère.</p>
-          <div class="rangee remonte">
-            <button class="btn sm" type="button" id="apiRotate" data-admin>Créer la clé complète</button>
-            <button class="btn sm" type="button" id="apiRotateSend" data-admin>Créer la clé d'envoi</button>
-          </div>
           <div class="champ mono"><label>Origines autorisées · une par ligne</label>
             <textarea id="apiOrigins" rows="2" placeholder="https://exemple.interne:9000"></textarea></div>
           <p class="aide remonte">
