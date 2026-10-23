@@ -474,6 +474,19 @@ await t('envoi depuis un alias autorisé, copie conservée', async () => {
   assert.equal(apres.length, avant + 1, 'aucune copie conservée');
   assert.deepEqual(apres[0].toList, ['admin@exemple.fr', 'second@exemple.fr']);
 });
+await t('un envoi rejoué sous la même clé ne part qu\'une fois', async () => {
+  const avant = relais.boite.length;
+  const corps = { from: 'rmm@exemple.fr', to: 'admin@exemple.fr', subject: 'Une seule fois', text: 'x' };
+  const r1 = await admin.post('/api/send', corps, { entetes: { 'idempotency-key': 'essai-cle-unique-0001' } });
+  assert.equal(r1.status, 200, JSON.stringify(r1.json));
+  const r2 = await admin.post('/api/send', { ...corps, idempotencyKey: 'essai-cle-unique-0001' });
+  assert.equal(r2.status, 200);
+  assert.equal(r2.json.rejoue, true);
+  assert.equal(r2.json.messageId, r1.json.messageId);
+  await new Promise(r => setTimeout(r, 300));
+  assert.equal(relais.boite.length, avant + 1, 'parti deux fois');
+  assert.equal((await admin.post('/api/send', corps, { entetes: { 'idempotency-key': 'court' } })).status, 400);
+});
 await t('envoi refusé depuis un alias en réception seule', async () => {
   assert.equal((await admin.post('/api/send', { from: 'proxy@exemple.fr', to: 'a@b.fr', subject: 'x', text: 'x' })).status, 403);
 });

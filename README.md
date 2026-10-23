@@ -192,6 +192,9 @@ X-Cachet-Key: sk_...
   "text": "Machine : srv01\n…" }
 ```
 
+- un en-tête `Idempotency-Key` (8 à 100 caractères, lettres, chiffres, `-`, `_`)
+  rend l'envoi sûr à rejouer : sous la même clé, pendant vingt-quatre heures, le
+  message ne part qu'une fois et la réponse dit `"rejoue": true` ;
 - une ligne `Machine : <hôte ou IP>` dans le corps devient la cible du ticket ;
 - l'objet doit être **stable** pour un même incident : c'est lui qui sert au
   dédoublonnage. Horodatages et compteurs vont dans le corps.

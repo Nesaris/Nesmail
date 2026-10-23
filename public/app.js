@@ -936,6 +936,9 @@ function expediteursPossibles(acc) {
   const liste = acc ? [acc] : S.accounts;
   return liste.flatMap(a => [a.addr, ...aliasesOf(a).filter(x => x.send !== false).map(x => x.addr)]).filter(Boolean);
 }
+// Une clé par message écrit : un double envoi (double clic, nouvel essai après
+// un délai) ne part qu'une fois.
+const cleEnvoi = () => Array.from(crypto.getRandomValues(new Uint8Array(16)), o => o.toString(16).padStart(2, '0')).join('');
 function openReply(m, defaultFrom) {
   const acc = S.accounts.find(a => a.id === m.accountId);
   const options = expediteursPossibles(acc);
@@ -946,7 +949,7 @@ function openReply(m, defaultFrom) {
   $('rText').value = '\n\n— ' + (m.fromName || m.fromAddr) + ' a écrit :\n' + String(m.text || '').split('\n').map(l => '> ' + l).join('\n');
   $('replySub').textContent = m.subject;
   $('replyErr').textContent = '';
-  rCtx = { inReplyTo: m.messageId };
+  rCtx = { inReplyTo: m.messageId, cle: cleEnvoi() };
   replyScrim.classList.add('on');
   setTimeout(() => $('rText').focus(), 60);
 }
@@ -958,7 +961,7 @@ function openCompose() {
   poser($('rFrom'), options.map(o => html`<option value=${o}>${o}</option>`));
   $('rTo').value = ''; $('rSubj').value = ''; $('rText').value = '';
   $('replyErr').textContent = '';
-  rCtx = { inReplyTo: null };
+  rCtx = { inReplyTo: null, cle: cleEnvoi() };
   replyScrim.classList.add('on');
   setTimeout(() => $('rTo').focus(), 60);
 }
@@ -972,7 +975,7 @@ $('replySheet').addEventListener('submit', async e => {
   try {
     await api('POST', '/api/send', {
       from: $('rFrom').value, to: $('rTo').value,
-      subject: $('rSubj').value, text: $('rText').value, inReplyTo: rCtx.inReplyTo
+      subject: $('rSubj').value, text: $('rText').value, inReplyTo: rCtx.inReplyTo, idempotencyKey: rCtx.cle
     });
     replyScrim.classList.remove('on'); toast('Message envoyé'); await refresh();
   } catch (err) {
