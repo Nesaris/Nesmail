@@ -278,6 +278,28 @@ await t('un retour à la ligne ne fabrique ni en-tête ni commande SMTP', async 
   assert.ok(!/^Bcc:/m.test(data), 'en-tête injecté');
 });
 const relaisClair = await relaisEssai({ mode: 'starttls', certificat: cert, sansStarttls: true });
+await t('un refus 550 remonte tel quel', async () => {
+  const refuse = tls.createServer({ key: cert.cle, cert: cert.cert }, s => {
+    s.write('220 essai\r\n');
+    let tampon = '';
+    s.on('data', d => {
+      tampon += d;
+      for (let i = tampon.indexOf('\r\n'); i >= 0; i = tampon.indexOf('\r\n')) {
+        const l = tampon.slice(0, i); tampon = tampon.slice(i + 2);
+        if (/^EHLO/i.test(l)) s.write('250-essai\r\n250 AUTH PLAIN\r\n');
+        else if (/^AUTH/i.test(l)) s.write('235 ok\r\n');
+        else if (/^MAIL/i.test(l)) s.write('550 5.7.1 expéditeur non autorisé\r\n');
+        else s.write('250 ok\r\n');
+      }
+    });
+    s.on('error', () => {});
+  });
+  await new Promise(r => refuse.listen(0, '127.0.0.1', r));
+  try {
+    await assert.rejects(() => smtp.send({ host: 'localhost', port: refuse.address().port, secure: true, user: 'u', pass: 'p', from: 'interdit@exemple.fr', to: ['a@b.fr'], subject: 'x', text: 'x' }),
+      e => { assert.equal(e.code, 550); assert.match(e.message, /non autorisé/); return true; });
+  } finally { refuse.close(); }
+});
 await t('relais sans STARTTLS : rien ne part, pas même les identifiants', async () => {
   await assert.rejects(() => smtp.send({ host: 'localhost', port: relaisClair.port, user: 'u', pass: 'p', from: 'rmm@exemple.fr', to: 'a@b.fr', subject: 'x', text: 'x' }), /STARTTLS/);
   assert.equal(relaisClair.auths.length, 0);
