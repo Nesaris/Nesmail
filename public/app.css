@@ -24,7 +24,7 @@ code{font-family:var(--mono);font-size:.92em}
 
 .shell{display:grid;grid-template-columns:234px 1fr;min-height:100vh}
 
-/* ── barre latérale ── */
+/* Barre latérale */
 .side{padding:26px 16px 24px 22px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;overflow-y:auto}
 .mark{display:flex;align-items:center;gap:10px;padding:0 10px;margin-bottom:26px}
 .mark .glyph{width:28px;height:28px;border-radius:9px;box-shadow:var(--lift);display:block;object-fit:cover}
@@ -50,7 +50,7 @@ code{font-family:var(--mono);font-size:.92em}
 .railcard .bar{height:3px;border-radius:3px;background:var(--well);margin-top:12px;overflow:hidden}
 .railcard .bar i{display:block;height:100%;width:0;border-radius:3px;background:var(--accent);transition:width 1s linear}
 
-/* ── scène ── */
+/* Scène */
 .stage{padding:22px 32px 60px;max-width:1300px}
 .topbar{display:flex;align-items:center;gap:12px;margin-bottom:30px}
 .search{display:flex;align-items:center;gap:9px;background:var(--well);border-radius:10px;padding:8px 13px;width:320px;color:var(--faint)}
@@ -77,7 +77,7 @@ code{font-family:var(--mono);font-size:.92em}
 .btn.sm{padding:6px 11px;font-size:12.5px}
 .btn[disabled]{opacity:.45;cursor:not-allowed;box-shadow:none;transform:none}
 
-/* ── chiffres ── */
+/* Chiffres */
 .figures{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
 .fig{background:var(--surface);border-radius:14px;padding:16px 17px;box-shadow:var(--lift);transition:.18s}
 .fig:hover{box-shadow:var(--lift-hi);transform:translateY(-2px)}
@@ -95,7 +95,7 @@ code{font-family:var(--mono);font-size:.92em}
 .board{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:start}
 @media(max-width:1080px){.split,.split.even,.board{grid-template-columns:1fr}.figures{grid-template-columns:repeat(2,1fr)}}
 
-/* ── cartes ── */
+/* Cartes */
 .card{background:var(--surface);border-radius:14px;box-shadow:var(--lift);overflow:hidden}
 .card + .card{margin-top:16px}
 .card>header{display:flex;align-items:center;gap:10px;padding:15px 18px 13px}
@@ -168,7 +168,7 @@ tr.sub td{background:var(--well)!important;padding-top:9px;padding-bottom:9px}
 .chip.on .i{color:var(--accent)}
 .chip .n{font-family:var(--mono);font-size:10.5px;color:var(--faint)}
 
-/* ── liste de messages ── */
+/* Liste de messages */
 .mailrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:flex-start;width:100%;
   text-align:left;padding:13px 18px;border-bottom:1px solid var(--hair-soft);transition:background .14s}
 .mailrow:last-child{border-bottom:none}
@@ -220,7 +220,7 @@ tr.sub td{background:var(--well)!important;padding-top:9px;padding-bottom:9px}
 .empty p{margin:0 auto;color:var(--muted);font-size:13px;max-width:40ch}
 .empty .btn{display:inline-flex;margin-top:16px}
 
-/* ── flux et bascules ── */
+/* Flux et bascules */
 .flowrow{display:grid;grid-template-columns:auto auto 1fr auto;gap:14px;align-items:center;
   padding:14px 18px;border-bottom:1px solid var(--hair-soft)}
 .flowrow:last-child{border-bottom:none}
@@ -240,7 +240,7 @@ tr.sub td{background:var(--well)!important;padding-top:9px;padding-bottom:9px}
 .switchrow small{display:block;color:var(--muted);font-size:12px}
 .switchrow .toggle{margin-left:auto}
 
-/* ── tickets ── */
+/* Tickets */
 .tk{display:block;width:100%;text-align:left;padding:13px 16px 14px;border-bottom:1px solid var(--hair-soft);
   border-left:2px solid transparent;transition:.14s}
 .tk:last-child{border-bottom:none}
@@ -263,7 +263,7 @@ tr.sub td{background:var(--well)!important;padding-top:9px;padding-bottom:9px}
 .urg.normale i{background:var(--accent)}
 .tk .auto{font-family:var(--mono);font-size:10px;color:var(--faint)}
 
-/* ── feuilles ── */
+/* Feuilles */
 .scrim{position:fixed;inset:0;z-index:100;background:rgba(20,22,26,.42);backdrop-filter:blur(3px);
   display:none;align-items:flex-start;justify-content:center;padding:44px 20px;overflow:auto}
 .scrim.on{display:flex}
@@ -326,7 +326,7 @@ tr.sub td{background:var(--well)!important;padding-top:9px;padding-bottom:9px}
 .hist li:last-child{border-bottom:none}
 .hist time{font-family:var(--mono);font-size:11px;color:var(--faint);white-space:nowrap}
 
-/* ── menu contextuel ── */
+/* Menu contextuel */
 .menu{position:fixed;z-index:300;min-width:215px;background:var(--surface);border-radius:12px;
   box-shadow:var(--lift-hi);padding:5px;animation:rise .12s ease-out}
 .menu button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;padding:8px 11px;
@@ -351,7 +351,7 @@ tr.sub td{background:var(--well)!important;padding-top:9px;padding-bottom:9px}
   box-shadow:var(--lift-hi);opacity:0;pointer-events:none;transition:.25s;max-width:min(560px,90vw)}
 .toast.on{opacity:1;transform:translateX(-50%)}
 
-/* ── petites mises en page, à la place des styles en ligne (CSP stricte) ── */
+/* Petites mises en page, à la place des styles en ligne (CSP stricte) */
 .espace{margin-top:16px}
 .espace-p{margin-top:10px}
 .espace-pp{margin-top:8px}
@@ -368,7 +368,7 @@ tr.sub td{background:var(--well)!important;padding-top:9px;padding-bottom:9px}
 .cale{width:24px;flex:none}
 .marque-porte{width:18px;height:18px;border-radius:5px;display:block}
 
-/* ── ce que soma.css dessine autrement, ramené au dessin de CACHET ── */
+/* Ce que soma.css dessine autrement, ramené au dessin de CACHET */
 .stage{flex:none;overflow:visible;min-height:auto;min-width:0}
 .shell>*{min-width:0}
 .page>*+*{margin-top:0}
@@ -379,7 +379,7 @@ tr.sub td{background:var(--well)!important;padding-top:9px;padding-bottom:9px}
 .chip{max-width:none;overflow:visible;border-radius:20px}
 .mark .glyph{flex:none}
 
-/* ── gamme Console : noir franc, accent vert ── */
+/* Gamme Console : noir franc, accent vert */
 html[data-gamme="console"] .side{background:var(--surface);border-right:1px solid var(--hair)}
 html[data-gamme="console"] .nav-item{border-radius:8px;color:var(--ink-soft);font-size:14px}
 html[data-gamme="console"] .nav-item:hover{background:var(--well);color:var(--ink)}
@@ -388,12 +388,12 @@ html[data-gamme="console"] .set>span{font-size:12px;letter-spacing:0;text-transf
 html[data-gamme="console"] .railcard,html[data-gamme="console"] .chip,html[data-gamme="console"] .sheet,html[data-gamme="console"] .menu{box-shadow:none;border:1px solid var(--hair)}
 html[data-gamme="console"] .title{font-weight:500}
 
-/* ── gamme Exploitation : surfaces neutres, bordures fines ── */
+/* Gamme Exploitation : surfaces neutres, bordures fines */
 html[data-gamme="exploitation"] .nav-item.on,html[data-gamme="exploitation"] .chip,html[data-gamme="exploitation"] .railcard{box-shadow:none;border:1px solid var(--hair)}
 html[data-gamme="exploitation"] .sheet{box-shadow:var(--lift);border:1px solid var(--hair)}
 
-/* ── gamme Lavande : verre clair sur fond lavande, rail sombre arrondi,
-   accent indigo, Poppins ── */
+/* Gamme Lavande : verre clair sur fond lavande, rail sombre arrondi,
+   accent indigo, Poppins */
 html[data-gamme="lavande"] body::before{display:none}
 html[data-gamme="lavande"] .shell{grid-template-columns:248px 1fr}
 html[data-gamme="lavande"] .side{background:var(--l-rail);color:var(--l-rail-encre);border-radius:30px;margin:14px 0 14px 14px;padding:24px 14px 18px;height:calc(100vh - 28px);top:14px}

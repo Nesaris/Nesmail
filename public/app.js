@@ -5,7 +5,6 @@
 // document inerte, puis reconstruit élément par élément sur une liste blanche.
 import { Api, porte, pageSecurite, pageComptes, appliquerTheme, estSombre, confirmer, dialogue, h } from '/socle/compte.js';
 
-/* ══ constantes ════════════════════════════════════════ */
 const URG = { basse: 'Basse', normale: 'Normale', haute: 'Haute', crit: 'Critique' };
 const STATUS = { nouveau: 'Nouveau', cours: 'En cours', traite: 'Traité' };
 const CHAMPS = { from: 'Expéditeur', to: 'Destinataire', subject: 'Objet', body: 'Corps',
@@ -35,7 +34,6 @@ const ICON = {
 let S = { accounts: [], tickets: [], messages: [], folders: [], rules: [], log: [], settings: {}, poll: {} };
 let view = { page: 'intake', intakeAlias: 'all', mailAcct: 'all', folder: 'all', sel: 0, sel2: 0, q: '', html: {} };
 
-/* ══ utilitaires ═══════════════════════════════════════ */
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -96,7 +94,6 @@ function tone(addr) {
   return ['', 'a2', 'a3', 'a4'][h % 4];
 }
 
-/* ══ menu contextuel ═══════════════════════════════════ */
 let menuOuvert = null;
 function fermeMenu() {
   if (menuOuvert) { menuOuvert.remove(); menuOuvert = null; }
@@ -126,10 +123,8 @@ function menu(x, y, items) {
   menuOuvert = el;
 }
 
-/* ══ déconnexion ═══════════════════════════════════════ */
 $('logout').addEventListener('click', async () => { try { await api('POST', '/api/compte/deconnexion'); } finally { location.reload(); } });
 
-/* ══ navigation ════════════════════════════════════════ */
 function aller(page, bouton) {
   view.page = page;
   document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('on'));
@@ -157,7 +152,6 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') ['acctScrim', 'tkScrim', 'ruleScrim', 'replyScrim'].forEach(s => $(s).classList.remove('on'));
 });
 
-/* ══ rendu ═════════════════════════════════════════════ */
 function render() {
   // Chaque bloc est isolé : une erreur dans les tickets ne doit pas laisser
   // les réglages vides sans que personne ne soit prévenu.
@@ -197,7 +191,6 @@ function renderAlerts() {
   $('alerts').innerHTML = html;
 }
 
-/* ── dossiers ── */
 function renderFolders() {
   const nav = $('folderNav');
   const dossiers = S.folders || [];
@@ -236,7 +229,6 @@ $('addFolder').onclick = async () => {
   catch (e) { toast(e.message); }
 };
 
-/* ── arrivée ── */
 function renderIntake() {
   const aliases = allAliases().filter(al => {
     const a = S.accounts.find(x => x.id === al.accountId);
@@ -269,7 +261,6 @@ function renderIntake() {
   renderMessageList($('intakeList'), items, 'sel', $('reader'), $('readerNote'), true);
 }
 
-/* ── courrier et envoyés ── */
 function renderMailPage() {
   const envoyes = view.folder === '__sent';
   const boxes = S.accounts.filter(a => !isIntake(a));
@@ -454,7 +445,6 @@ function copier(texte, ok) {
   navigator.clipboard.writeText(texte).then(() => toast(ok), () => toast('Copie impossible'));
 }
 
-/* ── tickets ── */
 function renderTickets() {
   const q = view.q;
   const match = t => !q || `${t.id} ${t.service} ${t.subject} ${t.host}`.toLowerCase().includes(q);
@@ -515,7 +505,6 @@ function renderTickets() {
   }).join('') : `<div class="empty"><strong>Aucun alias</strong><p>Ajoutez un alias par service sur votre boîte à tickets.</p></div>`;
 }
 
-/* ── comptes ── */
 let openAliases = new Set();
 function renderAccounts() {
   $('acctNote').textContent = `${S.accounts.length} boîte${S.accounts.length > 1 ? 's' : ''} · ${allAliases().length} alias`;
@@ -603,7 +592,6 @@ function menuCompte(e, a) {
   ]);
 }
 
-/* ── journal ── */
 function renderLog() {
   $('logNote').textContent = `${S.log.length} lignes`;
   const pill = k => k === 'ticket' ? 'pill amber' : k === 'erreur' ? 'pill bad'
@@ -616,7 +604,6 @@ function renderLog() {
   </tr>`).join('') : `<tr><td colspan="4"><div class="empty"><p>Rien encore.</p></div></td></tr>`;
 }
 
-/* ══ règles ════════════════════════════════════════════ */
 const ruleScrim = $('ruleScrim');
 let rDraft = { id: null, mode: 'all', conds: [] };
 
@@ -764,7 +751,6 @@ $('ruleSheet').addEventListener('submit', async e => {
   } catch (err) { toast(err.message); }
 });
 
-/* ══ feuille compte ════════════════════════════════════ */
 const acctScrim = $('acctScrim');
 let draft = { id: null, provider: 'manual', kind: 'mail', aliases: [] };
 
@@ -893,7 +879,6 @@ $('testAccount').onclick = async () => {
   await refresh();
 };
 
-/* ══ feuille ticket ════════════════════════════════════ */
 const tkScrim = $('tkScrim');
 let tDraft = { id: null, urgency: 'normale', status: 'nouveau', messageId: null };
 function syncTk() {
@@ -945,7 +930,6 @@ $('tkSheet').addEventListener('submit', async e => {
   } catch (err) { toast(err.message); }
 });
 
-/* ══ envoi ═════════════════════════════════════════════ */
 const replyScrim = $('replyScrim');
 let rCtx = {};
 function expediteursPossibles(acc) {
@@ -998,7 +982,6 @@ $('replySheet').addEventListener('submit', async e => {
   $('replyLabel').textContent = 'Envoyer';
 });
 
-/* ══ réglages ══════════════════════════════════════════ */
 function renderPrefs() {
   const s = S.settings || {};
   $('sPoll').value = s.pollSeconds ?? 120;
@@ -1085,7 +1068,6 @@ $('testHook').onclick = async () => {
   b.textContent = 'Envoyer un essai'; await refresh();
 };
 
-/* ══ relève ════════════════════════════════════════════ */
 async function doPoll() {
   try {
     const r = await api('POST', '/api/poll');
@@ -1128,7 +1110,6 @@ function startClock() {
   setInterval(refresh, 30000);
 }
 
-/* ══ démarrage ═════════════════════════════════════════ */
 // Renseigné tout de suite : cette valeur ne dépend d'aucune donnée du serveur.
 if ($('apiBase')) $('apiBase').value = location.origin + '/api';
 
