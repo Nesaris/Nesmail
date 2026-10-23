@@ -1,0 +1,138 @@
+// Parcours réel de CACHET dans Chromium : installation du premier compte (clé
+// d'accès virtuelle), une boîte à tickets relevée sur un serveur IMAP d'essai,
+// puis chaque écran dans chaque gamme (SOMA, Console, Exploitation, Lavande),
+// clair et sombre, avec le contrôle de mise en page du socle à chaque largeur.
+// Usage : node outils/parcours-navigateur.mjs [dossier-des-captures]
+// (Playwright est cherché dans PLAYWRIGHT, sinon dans les modules du projet.)
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import tls from 'node:tls';
+import { chevauchements, LARGEURS } from '../socle/essai/mise-en-page.mjs';
+import { certificatEssai } from '../socle/essai/smtp.js';
+import { imapServer, makeMessage } from '../test/mocks.js';
+import { demarrer } from '../lib/serveur.js';
+
+const { chromium } = await import(process.env.PLAYWRIGHT || 'playwright');
+const sortie = process.argv[2] || path.join(os.tmpdir(), 'captures-cachet');
+fs.mkdirSync(sortie, { recursive: true });
+const MDP = 'phrase de passe pour cachet en local';
+const JETON = 'jeton-installation-du-parcours-0123456789';
+
+const cert = certificatEssai('localhost');
+tls.setDefaultCACertificates([...tls.getCACertificates('default'), cert.cert]);
+const imap = imapServer([
+  makeMessage({ from: 'noreply@sup.exemple.fr', to: 'rmm@exemple.fr', subject: 'Agent hors ligne sur srv01', body: 'Machine : srv01\nDurée : 11 minutes' }),
+  makeMessage({ from: 'bot@conteneurs.exemple.fr', to: 'conteneurs@exemple.fr', subject: 'api redémarre en boucle', body: 'Machine : srv01\nCode : 137', encoded: 'multipart' }),
+  makeMessage({ from: 'proxy@exemple.fr', to: 'proxy@exemple.fr', subject: 'Certificat renouvelé', body: 'Machine : proxy\nRAS' }),
+], { mode: 'tls', certificat: cert });
+const portImap = await imap.ecouter();
+
+const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'cachet-parcours-'));
+const muet = { info() {}, warn() {}, error: (...a) => console.error(...a) };
+const env = gamme => ({ CACHET_DATA: dossier, PORT: '0', HOTE: '127.0.0.1', SOCLE_JETON_INSTALLATION: JETON, SOCLE_THEME: gamme, SOCLE_ARGON2_M: '19456', SOCLE_ARGON2_T: '2', SOCLE_ARGON2_P: '1' });
+
+const navigateur = await chromium.launch();
+const rapport = [];
+const erreurs = [];
+
+async function controle(page, nom) {
+  for (const w of LARGEURS) {
+    await page.setViewportSize({ width: w, height: w < 500 ? 780 : 900 });
+    await page.waitForTimeout(200);
+    const defauts = await page.evaluate(chevauchements);
+    const brut = await page.evaluate(() => (document.body.innerText.match(/\b(null|undefined|NaN)\b/) || [])[0]);
+    if (brut) defauts.push({ type: 'texte-brut', detail: `« ${brut} » affiché` });
+    rapport.push({ ecran: nom, largeur: w, defauts });
+    if ([360, 1280].includes(w)) await page.screenshot({ path: `${sortie}/${nom}-${w}.png` });
+  }
+  await page.setViewportSize({ width: 1280, height: 860 });
+}
+
+let app = await demarrer(env('soma'), { log: muet });
+const contexte = await navigateur.newContext({ viewport: { width: 1280, height: 860 } });
+contexte.setDefaultTimeout(12000);
+const page = await contexte.newPage();
+page.on('console', m => { if (m.type() === 'error') erreurs.push(m.text()); });
+page.on('pageerror', e => erreurs.push(String(e)));
+const cdp = await contexte.newCDPSession(page);
+await cdp.send('WebAuthn.enable');
+await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } });
+const base = () => `http://localhost:${app.serveur.address().port}`;
+
+// Installation : jeton, identifiant, mot de passe, clé d'accès, codes de secours.
+await page.goto(base());
+await page.getByLabel('Jeton d’installation').fill(JETON);
+await page.getByLabel('Identifiant').fill('ana');
+await page.getByLabel('Mot de passe').fill(MDP);
+await page.getByRole('button', { name: 'Créer le compte' }).click();
+await page.getByRole('button', { name: /Créer la clé maintenant/ }).click();
+await page.getByText('J’ai rangé ces codes en lieu sûr.').click();
+await page.getByRole('button', { name: 'Terminer' }).click();
+await page.locator('#app:not(.hidden)').waitFor();
+await page.getByRole('heading', { name: 'Arrivée des tickets' }).waitFor();
+
+// Une boîte à tickets, créée et relevée depuis la session du navigateur.
+await page.evaluate(async port => {
+  const { session } = await (await fetch('/api/compte/etat')).json();
+  const h = { 'Content-Type': 'application/json', 'X-CSRF': session.csrf };
+  await fetch('/api/accounts', { method: 'POST', headers: h, body: JSON.stringify({
+    name: 'Arrivée', addr: 'alertes@exemple.fr', kind: 'tickets', imapHost: 'localhost', imapPort: port, imapTls: true,
+    smtpHost: 'localhost', smtpPort: 465, password: 'mot-de-passe-de-la-boite',
+    aliases: [{ addr: 'conteneurs@exemple.fr', svc: 'conteneurs', urg: 'crit' }, { addr: 'rmm@exemple.fr', svc: 'supervision', urg: 'haute' }, { addr: 'proxy@exemple.fr', svc: 'proxy', urg: 'basse', send: false }],
+  }) });
+  await fetch('/api/poll', { method: 'POST', headers: h, body: '{}' });
+  await fetch('/api/folders', { method: 'POST', headers: h, body: JSON.stringify({ name: 'Archives' }) });
+  await fetch('/api/rules', { method: 'POST', headers: h, body: JSON.stringify({ name: 'Certificats en sourdine', conditions: { mode: 'all', items: [{ champ: 'subject', op: 'contient', valeur: 'certificat' }] }, actions: { read: true } }) });
+}, portImap);
+
+const ECRANS = [
+  ['Arrivée', 'Arrivée des tickets', 'arrivee'], ['Tickets', 'Tickets', 'tickets'], ['Courrier', 'Courrier', 'courrier'],
+  ['Boîtes', 'Boîtes', 'boites'], ['Journal', 'Journal', 'journal'], ['Réglages', 'Réglages', 'reglages'],
+  ['Comptes', 'Comptes', 'comptes'], ['Sécurité', 'Sécurité', 'securite'],
+];
+
+for (const gamme of ['soma', 'console', 'exploitation', 'lavande']) {
+  if (gamme !== 'soma') { await app.arreter(); app = await demarrer(env(gamme), { log: muet }); }
+  for (const theme of gamme === 'console' ? ['dark'] : ['light', 'dark']) {
+    await page.goto(base());
+    await page.evaluate(t => localStorage.setItem('theme', t), theme);
+    await page.reload();
+    // Après un redémarrage, la session tient (même base) : l'application s'ouvre.
+    await page.locator('#app:not(.hidden)').waitFor();
+    for (const [bouton, titre, nom] of ECRANS) {
+      await page.locator('.side').getByRole('button', { name: new RegExp('^' + bouton) }).click();
+      await page.getByRole('heading', { name: titre, exact: true }).first().waitFor();
+      await page.waitForTimeout(250);
+      await controle(page, `${gamme}-${theme}-${nom}`);
+    }
+    // Feuilles : une boîte, un ticket, une règle.
+    await page.locator('.side').getByRole('button', { name: /^Boîtes/ }).click();
+    await page.getByRole('button', { name: 'Modifier' }).first().click();
+    await page.locator('#acctScrim.on').waitFor();
+    await controle(page, `${gamme}-${theme}-feuille-boite`);
+    await page.keyboard.press('Escape');
+    await page.locator('.side').getByRole('button', { name: /^Tickets/ }).click();
+    await page.getByRole('button', { name: 'Nouveau ticket' }).click();
+    await page.locator('#tkScrim.on').waitFor();
+    await controle(page, `${gamme}-${theme}-feuille-ticket`);
+    await page.keyboard.press('Escape');
+  }
+}
+
+// Le corps HTML d'un message : mis en forme, sans script ni image.
+await page.locator('.side').getByRole('button', { name: /^Arrivée/ }).click();
+await page.getByRole('button', { name: /api redémarre en boucle/ }).click();
+const corps = await page.locator('#reader .bodyhtml').innerHTML();
+if (/<script|<img|onclick/i.test(corps)) erreurs.push(`corps HTML dangereux rendu : ${corps.slice(0, 200)}`);
+if (!/<b>vous<\/b>/.test(corps)) erreurs.push(`mise en forme perdue : ${corps.slice(0, 200)}`);
+
+const defauts = rapport.filter(r => r.defauts.length);
+fs.writeFileSync(`${sortie}/rapport.json`, JSON.stringify({ defauts, erreurs }, null, 2));
+console.log(`${rapport.length} contrôles, ${defauts.length} avec défauts, ${erreurs.length} erreur(s) de console`);
+for (const d of defauts.slice(0, 30)) console.log(`  ${d.ecran} @${d.largeur} : ${d.defauts.map(x => `${x.type} ${x.detail || ''}`).join(' ; ').slice(0, 300)}`);
+for (const e of erreurs.slice(0, 10)) console.log('  console : ' + e.slice(0, 300));
+await navigateur.close();
+await app.arreter();
+imap.close();
+process.exit(defauts.length || erreurs.length ? 1 : 0);

@@ -1,33 +1,18 @@
 <!DOCTYPE html>
-<html lang="fr" data-theme="light">
+<html lang="fr" data-gamme="__GAMME__">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <title>Cachet</title>
 <link rel="icon" href="/favicon.ico" sizes="any">
-<link rel="shortcut icon" href="/favicon.ico">
 <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png">
 <link rel="apple-touch-icon" href="/favicon.png">
-<link rel="stylesheet" href="/app.css">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/socle/soma.css">
+<link rel="stylesheet" href="/app.css?v=__VERSION__">
+<script type="module" src="/app.js?v=__VERSION__" nonce="__NONCE__"></script>
 </head>
 <body>
-
-<!-- ── connexion ──────────────────────────────────────── -->
-<div class="gate hidden" id="gate">
-  <form id="loginForm">
-    <img class="logo" src="/logo.png" alt="Cachet">
-    <h1>Cachet</h1>
-    <p>Arrivée des alertes et suivi des tickets.</p>
-    <div class="field"><label>Mot de passe</label><input type="password" id="gatePass" autocomplete="current-password" required></div>
-    <div class="field mono hidden" id="gateTotpField"><label>Code à 6 chiffres</label><input id="gateTotp" inputmode="numeric" autocomplete="one-time-code" maxlength="6"></div>
-    <button class="btn solid" type="submit">Entrer</button>
-    <div class="err" id="gateErr"></div>
-  </form>
-</div>
 
 <!-- ── application ────────────────────────────────────── -->
 <div class="shell hidden" id="app">
@@ -46,15 +31,21 @@
     </div>
 
     <div class="set">
-      <span>Dossiers <button class="add" id="addFolder" title="Nouveau dossier">+ nouveau</button></span>
+      <span>Dossiers <button class="add" id="addFolder" title="Nouveau dossier" data-membre>+ nouveau</button></span>
       <div id="folderNav"></div>
     </div>
 
     <div class="set">
       <span>Réglages</span>
-      <button class="nav-item" data-go="acct"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.6"/><path d="M15.6 8.4v5.2a2.6 2.6 0 0 0 5 0V12a8.5 8.5 0 1 0-3.4 6.8"/></svg>Comptes<span class="count" id="cAcct">0</span></button>
+      <button class="nav-item" data-go="acct"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.6"/><path d="M15.6 8.4v5.2a2.6 2.6 0 0 0 5 0V12a8.5 8.5 0 1 0-3.4 6.8"/></svg>Boîtes<span class="count" id="cAcct">0</span></button>
       <button class="nav-item" data-go="log"><svg class="i" viewBox="0 0 24 24"><path d="M8 6.5h12M8 12h12M8 17.5h12M4 6.5h.01M4 12h.01M4 17.5h.01"/></svg>Journal</button>
       <button class="nav-item" data-go="prefs"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 14.6a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1v.2a2 2 0 0 1-4 0v-.1a1.6 1.6 0 0 0-2.8-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0-1.1-2.7H3.4a2 2 0 0 1 0-4h.1a1.6 1.6 0 0 0 1.1-2.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 2.7-1.1V3.4a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 2.8 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7h.2a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.4 1z"/></svg>Réglages</button>
+    </div>
+
+    <div class="set">
+      <span>Accès</span>
+      <button class="nav-item" data-go="comptes" data-admin><svg class="i" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M15.5 5.6a3.2 3.2 0 0 1 0 5.8M17.5 13.6a5.5 5.5 0 0 1 3 5.4"/></svg>Comptes</button>
+      <button class="nav-item" data-go="securite"><svg class="i" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="2.2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg>Sécurité</button>
     </div>
 
     <div class="railcard">
@@ -71,8 +62,8 @@
         <input id="q" placeholder="Chercher un ticket, un service, une machine">
       </label>
       <div class="topright">
-        <button class="ghost" id="composeNow" title="Écrire"><svg class="i" viewBox="0 0 24 24"><path d="M20.5 3.5 3.5 10.4l6.6 2.6 2.6 6.6z"/><path d="M10.1 13 20.5 3.5"/></svg></button>
-        <button class="ghost" id="pollNow" title="Relever maintenant"><svg class="i" viewBox="0 0 24 24"><path d="M20 11.4a8.2 8.2 0 1 0-1.9 6.2"/><path d="M20.5 5v5h-5"/></svg></button>
+        <button class="ghost" id="composeNow" title="Écrire" data-membre><svg class="i" viewBox="0 0 24 24"><path d="M20.5 3.5 3.5 10.4l6.6 2.6 2.6 6.6z"/><path d="M10.1 13 20.5 3.5"/></svg></button>
+        <button class="ghost" id="pollNow" title="Relever maintenant" data-membre><svg class="i" viewBox="0 0 24 24"><path d="M20 11.4a8.2 8.2 0 1 0-1.9 6.2"/><path d="M20.5 5v5h-5"/></svg></button>
         <button class="ghost" id="mode" title="Changer l'apparence"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M12 3.6v16.8a8.4 8.4 0 0 0 0-16.8z" fill="currentColor" stroke="none"/></svg></button>
         <button class="ghost" id="logout" title="Se déconnecter"><svg class="i" viewBox="0 0 24 24"><path d="M15 16.5 19.5 12 15 7.5M19 12H8M11 4.5H6.5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2H11"/></svg></button>
       </div>
@@ -84,7 +75,7 @@
     <section class="page on" id="p-intake">
       <div class="headrow">
         <div><h1 class="title">Arrivée des tickets</h1><p class="lede" id="intakeLede">—</p></div>
-        <div class="actions"><button class="btn" id="pollNow2"><svg class="i sm" viewBox="0 0 24 24"><path d="M20 11.4a8.2 8.2 0 1 0-1.9 6.2"/><path d="M20.5 5v5h-5"/></svg>Relever</button></div>
+        <div class="actions"><button class="btn" id="pollNow2" data-membre><svg class="i sm" viewBox="0 0 24 24"><path d="M20 11.4a8.2 8.2 0 1 0-1.9 6.2"/><path d="M20.5 5v5h-5"/></svg>Relever</button></div>
       </div>
       <div class="chips" id="intakeChips"></div>
       <div class="split">
@@ -97,7 +88,7 @@
     <section class="page" id="p-tick">
       <div class="headrow">
         <div><h1 class="title">Tickets</h1><p class="lede">L'alias visé donne le service ; les mots-clés ne peuvent que faire monter l'urgence.</p></div>
-        <div class="actions"><button class="btn solid" id="newTicket"><svg class="i sm" viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg>Nouveau ticket</button></div>
+        <div class="actions"><button class="btn solid" id="newTicket" data-membre><svg class="i sm" viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg>Nouveau ticket</button></div>
       </div>
       <div class="figures" id="tickFigs"></div>
       <div class="board">
@@ -105,7 +96,7 @@
         <div class="card"><header><h2>En cours</h2><span class="note" id="nCours">0</span></header><div id="col-cours"></div></div>
         <div class="card"><header><h2>Traité</h2><span class="note" id="nTraite">0</span></header><div id="col-traite"></div></div>
       </div>
-      <div class="card" style="margin-top:16px">
+      <div class="espace card">
         <header><h2>Alias qui ouvrent un ticket</h2><span class="note" id="aliasNote"></span></header>
         <div id="aliasFlow"></div>
       </div>
@@ -124,12 +115,12 @@
     <!-- comptes -->
     <section class="page" id="p-acct">
       <div class="headrow">
-        <div><h1 class="title">Comptes</h1><p class="lede">Une boîte, ses alias, et ce que Cachet fait de ce qui arrive. Clic droit sur une ligne pour les actions.</p></div>
-        <div class="actions"><button class="btn solid" id="addAccount"><svg class="i sm" viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg>Ajouter une boîte</button></div>
+        <div><h1 class="title">Boîtes</h1><p class="lede">Une boîte, ses alias, et ce que Cachet fait de ce qui arrive. Clic droit sur une ligne pour les actions.</p></div>
+        <div class="actions"><button class="btn solid" id="addAccount" data-admin><svg class="i sm" viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg>Ajouter une boîte</button></div>
       </div>
       <div class="card">
         <header><h2>Boîtes</h2><span class="note" id="acctNote"></span></header>
-        <table><thead><tr><th>Boîte</th><th>Serveur</th><th>Usage</th><th>Traitement</th><th>État</th><th></th></tr></thead><tbody id="acctBody"></tbody></table>
+        <div class="tw"><table><thead><tr><th>Boîte</th><th class="col-cache">Serveur</th><th class="col-cache2">Usage</th><th class="col-cache">Traitement</th><th class="col-cache2">État</th><th></th></tr></thead><tbody id="acctBody"></tbody></table></div>
       </div>
     </section>
 
@@ -137,7 +128,7 @@
     <section class="page" id="p-log">
       <div class="headrow"><div><h1 class="title">Journal</h1><p class="lede">Ce que Cachet a fait, sans le contenu des messages.</p></div></div>
       <div class="card"><header><h2>Dernières décisions</h2><span class="note" id="logNote"></span></header>
-        <table><thead><tr><th>Expéditeur</th><th>Boîte visée</th><th>Décision</th><th class="cell-right">Quand</th></tr></thead><tbody id="logBody"></tbody></table>
+        <div class="tw"><table><thead><tr><th class="col-cache2">Expéditeur</th><th class="col-cache">Boîte visée</th><th>Décision</th><th class="cell-right">Quand</th></tr></thead><tbody id="logBody"></tbody></table></div>
       </div>
     </section>
 
@@ -149,90 +140,93 @@
         <div class="card"><header><h2>Relève et tickets</h2></header>
           <div class="body">
             <div class="duo">
-              <div class="field mono"><label>Relève toutes les (s)</label><input id="sPoll" type="number" min="30"></div>
-              <div class="field mono"><label>Dédoublonnage (min)</label><input id="sDedup" type="number" min="0"></div>
+              <div class="champ mono"><label>Relève toutes les (s)</label><input id="sPoll" type="number" min="30"></div>
+              <div class="champ mono"><label>Dédoublonnage (min)</label><input id="sDedup" type="number" min="0"></div>
             </div>
-            <div class="field mono"><label>Rétention des tickets traités (jours)</label><input id="sRet" type="number" min="1"></div>
-            <p style="color:var(--faint);font-size:11.5px;margin:0 0 12px">Deux alertes de même service, même machine et même objet dans la fenêtre incrémentent le ticket au lieu d'en ouvrir un second.</p>
-            <button class="btn solid" id="saveSettings">Enregistrer</button>
+            <div class="champ mono"><label>Rétention des tickets traités (jours)</label><input id="sRet" type="number" min="1"></div>
+            <p class="aide">Deux alertes de même service, même machine et même objet dans la fenêtre incrémentent le ticket au lieu d'en ouvrir un second.</p>
+            <button class="btn solid" id="saveSettings" data-admin>Enregistrer</button>
           </div>
         </div>
         <div class="card"><header><h2>Telegram</h2></header>
           <div class="body">
-            <div class="switchrow" style="margin-bottom:12px"><div><strong>Prévenir sur Telegram</strong><small>À l'ouverture d'un ticket.</small></div><div class="toggle" id="tgOn"><i></i></div></div>
-            <div class="field mono"><label>Jeton du bot</label><input id="tgToken" type="password" placeholder="laisser vide pour ne pas changer"></div>
+            <div class="espace-bas switchrow"><div><strong>Prévenir sur Telegram</strong><small>À l'ouverture d'un ticket.</small></div><div class="toggle" id="tgOn"><i></i></div></div>
+            <div class="champ mono"><label>Jeton du bot</label><input id="tgToken" type="password" placeholder="laisser vide pour ne pas changer"></div>
             <div class="duo">
-              <div class="field mono"><label>Chat ID</label><input id="tgChat"></div>
-              <div class="field"><label>À partir de</label><select id="tgMin"><option value="basse">Basse</option><option value="normale">Normale</option><option value="haute">Haute</option><option value="crit">Critique</option></select></div>
+              <div class="champ mono"><label>Chat ID</label><input id="tgChat"></div>
+              <div class="champ"><label>À partir de</label><select id="tgMin"><option value="basse">Basse</option><option value="normale">Normale</option><option value="haute">Haute</option><option value="crit">Critique</option></select></div>
             </div>
-            <button class="btn solid" id="saveTg">Enregistrer</button>
+            <button class="btn solid" id="saveTg" data-admin>Enregistrer</button>
           </div>
         </div>
       </div>
 
-      <div class="card" style="margin-top:16px">
+      <div class="espace card">
         <header><h2>Règles de tri</h2><span class="note" id="rulesNote"></span>
-          <button class="btn sm" id="addRule" style="margin-left:auto">Ajouter une règle</button></header>
+          <button class="pousse btn sm" id="addRule" data-admin>Ajouter une règle</button></header>
         <div id="rulesList"></div>
       </div>
 
-      <div class="card" style="margin-top:16px">
+      <div class="espace card">
         <header><h2>Liaison avec un service externe</h2></header>
         <div class="body">
-          <div class="field mono"><label>Adresse de l'API</label><input id="apiBase" readonly></div>
+          <div class="champ mono"><label>Adresse de l'API</label><input id="apiBase" readonly></div>
           <div class="duo">
-            <div class="field mono"><label>Clé complète · en-tête X-Cachet-Key</label><input id="apiKey" readonly placeholder="…"></div>
-            <div class="field mono"><label>Clé d'envoi · POST /api/send seulement</label><input id="apiSendKey" readonly placeholder="…"></div>
+            <div class="champ mono"><label>Clé complète · en-tête X-Cachet-Key</label><input id="apiKey" readonly placeholder="…"></div>
+            <div class="champ mono"><label>Clé d'envoi · POST /api/send seulement</label><input id="apiSendKey" readonly placeholder="…"></div>
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin:-2px 0 14px">
-            <button class="btn sm" type="button" id="apiReveal">Afficher</button>
-            <button class="btn sm" type="button" id="apiCopy">Copier la clé complète</button>
-            <button class="btn sm" type="button" id="apiCopySend">Copier la clé d'envoi</button>
-            <button class="btn sm danger" type="button" id="apiRotate">Régénérer la complète</button>
-            <button class="btn sm danger" type="button" id="apiRotateSend">Régénérer celle d'envoi</button>
+          <div class="rangee remonte">
+            <button class="btn sm" type="button" id="apiReveal" data-admin>Afficher</button>
+            <button class="btn sm" type="button" id="apiCopy" data-admin>Copier la clé complète</button>
+            <button class="btn sm" type="button" id="apiCopySend" data-admin>Copier la clé d'envoi</button>
+            <button class="btn sm danger" type="button" id="apiRotate" data-admin>Régénérer la complète</button>
+            <button class="btn sm danger" type="button" id="apiRotateSend" data-admin>Régénérer celle d'envoi</button>
           </div>
-          <div class="field mono"><label>Origines autorisées · une par ligne</label>
+          <div class="champ mono"><label>Origines autorisées · une par ligne</label>
             <textarea id="apiOrigins" rows="2" placeholder="https://exemple.interne:9000"></textarea></div>
-          <p style="margin:-4px 0 12px;color:var(--faint);font-size:11.5px">
+          <p class="aide remonte">
             Nécessaire uniquement si un front appelle Cachet depuis le navigateur. Un service qui appelle depuis son serveur n'en a pas besoin.</p>
-          <button class="btn solid" id="saveApi">Enregistrer</button>
+          <button class="btn solid" id="saveApi" data-admin>Enregistrer</button>
         </div>
       </div>
 
-      <div class="card" style="margin-top:16px">
+      <div class="espace card">
         <header><h2>Webhook sortant</h2><span class="note" id="hookNote">jamais appelé</span></header>
         <div class="body">
-          <div class="switchrow" style="margin-bottom:12px"><div><strong>Prévenir à chaque ticket</strong><small>Ouverture, répétition et changement de statut.</small></div><div class="toggle" id="hookOn"><i></i></div></div>
-          <div class="field mono"><label>URL appelée</label><input id="hookUrl" placeholder="https://exemple.interne/api/hook"></div>
+          <div class="espace-bas switchrow"><div><strong>Prévenir à chaque ticket</strong><small>Ouverture, répétition et changement de statut.</small></div><div class="toggle" id="hookOn"><i></i></div></div>
+          <div class="champ mono"><label>URL appelée</label><input id="hookUrl" placeholder="https://exemple.interne/api/hook"></div>
           <div class="duo">
-            <div class="field mono"><label>Clé envoyée</label><input id="hookKey" type="password" placeholder="inchangée"></div>
-            <div class="field mono"><label>En-tête de la clé</label><input id="hookHeader" placeholder="x-cachet-key"></div>
+            <div class="champ mono"><label>Clé envoyée</label><input id="hookKey" type="password" placeholder="inchangée"></div>
+            <div class="champ mono"><label>En-tête de la clé</label><input id="hookHeader" placeholder="x-cachet-key"></div>
           </div>
-          <div class="field mono"><label>Secret de signature</label><input id="hookSecret" type="password" placeholder="inchangé"></div>
-          <p style="margin:-4px 0 12px;color:var(--faint);font-size:11.5px">
+          <div class="champ mono"><label>Secret de signature</label><input id="hookSecret" type="password" placeholder="inchangé"></div>
+          <p class="aide remonte">
             Le corps est signé en HMAC SHA-256 dans <code>X-Cachet-Signature</code>, sous la forme <code>sha256=…</code>.</p>
-          <div style="display:flex;gap:8px"><button class="btn solid" id="saveHook">Enregistrer</button><button class="btn" id="testHook">Envoyer un essai</button></div>
+          <div class="rangee"><button class="btn solid" id="saveHook" data-admin>Enregistrer</button><button class="btn" id="testHook" data-admin>Envoyer un essai</button></div>
         </div>
       </div>
 
-      <div class="card" style="margin-top:16px">
-        <header><h2>Routes de l'API</h2><span class="note">cookie de session ou X-Cachet-Key</span></header>
+      <div class="espace card">
+        <header><h2>Routes de l'API</h2><span class="note">session, X-Cachet-Key ou jeton du Hub</span></header>
         <table>
-          <thead><tr><th>Méthode</th><th>Route</th><th>Effet</th></tr></thead>
+          <thead><tr><th>Méthode</th><th>Route</th><th class="col-cache2">Effet</th></tr></thead>
           <tbody>
-            <tr><td class="cell-mono">GET</td><td class="cell-mono">/api</td><td class="cell-muted">liste des routes</td></tr>
-            <tr><td class="cell-mono">GET</td><td class="cell-mono">/api/ping</td><td class="cell-muted">état du service</td></tr>
-            <tr><td class="cell-mono">GET</td><td class="cell-mono">/api/tickets</td><td class="cell-muted">filtres status, service, urgency, since</td></tr>
-            <tr><td class="cell-mono">POST</td><td class="cell-mono">/api/tickets</td><td class="cell-muted">créer un ticket</td></tr>
-            <tr><td class="cell-mono">PATCH</td><td class="cell-mono">/api/tickets/:id</td><td class="cell-muted">statut, urgence, notes</td></tr>
-            <tr><td class="cell-mono">GET</td><td class="cell-mono">/api/messages/detailed</td><td class="cell-muted">messages avec service et urgence résolus</td></tr>
-            <tr><td class="cell-mono">POST</td><td class="cell-mono">/api/ack</td><td class="cell-muted">accuser réception de messages</td></tr>
-            <tr><td class="cell-mono">GET</td><td class="cell-mono">/api/aliases</td><td class="cell-muted">alias et services déclarés</td></tr>
-            <tr><td class="cell-mono">POST</td><td class="cell-mono">/api/send</td><td class="cell-muted">envoyer un message · clé d'envoi suffisante</td></tr>
+            <tr><td class="cell-mono">GET</td><td class="cell-mono">/api</td><td class="cell-muted col-cache2">liste des routes</td></tr>
+            <tr><td class="cell-mono">GET</td><td class="cell-mono">/api/ping</td><td class="cell-muted col-cache2">état du service</td></tr>
+            <tr><td class="cell-mono">GET</td><td class="cell-mono">/api/tickets</td><td class="cell-muted col-cache2">filtres status, service, urgency, since</td></tr>
+            <tr><td class="cell-mono">POST</td><td class="cell-mono">/api/tickets</td><td class="cell-muted col-cache2">créer un ticket</td></tr>
+            <tr><td class="cell-mono">PATCH</td><td class="cell-mono">/api/tickets/:id</td><td class="cell-muted col-cache2">statut, urgence, notes</td></tr>
+            <tr><td class="cell-mono">GET</td><td class="cell-mono">/api/messages/detailed</td><td class="cell-muted col-cache2">messages avec service et urgence résolus</td></tr>
+            <tr><td class="cell-mono">POST</td><td class="cell-mono">/api/ack</td><td class="cell-muted col-cache2">accuser réception de messages</td></tr>
+            <tr><td class="cell-mono">GET</td><td class="cell-mono">/api/aliases</td><td class="cell-muted col-cache2">alias et services déclarés</td></tr>
+            <tr><td class="cell-mono">POST</td><td class="cell-mono">/api/send</td><td class="cell-muted col-cache2">envoyer un message · clé d'envoi suffisante</td></tr>
           </tbody>
         </table>
       </div>
     </section>
+    <!-- comptes du service et sécurité : pages du socle -->
+    <section class="page" id="p-comptes"></section>
+    <section class="page" id="p-securite"></section>
   </main>
 </div>
 
@@ -249,30 +243,34 @@
 
     <div class="sect">Identité</div>
     <div class="duo">
-      <div class="field"><label>Nom affiché</label><input id="aName" placeholder="Arrivée des alertes" required></div>
-      <div class="field mono"><label>Adresse</label><input id="aAddr" type="email" placeholder="alertes@exemple.fr" required></div>
+      <div class="champ"><label>Nom affiché</label><input id="aName" placeholder="Arrivée des alertes" required></div>
+      <div class="champ mono"><label>Adresse</label><input id="aAddr" type="email" placeholder="alertes@exemple.fr" required></div>
     </div>
     <div class="duo">
-      <div class="field mono"><label>Identifiant IMAP</label><input id="aUser" placeholder="identique à l'adresse"></div>
-      <div class="field mono"><label>Mot de passe</label><input id="aPass" type="password" placeholder="••••••••"></div>
+      <div class="champ mono"><label>Identifiant IMAP</label><input id="aUser" placeholder="identique à l'adresse"></div>
+      <div class="champ mono"><label>Mot de passe</label><input id="aPass" type="password" placeholder="••••••••"></div>
     </div>
 
     <div class="sect">Serveurs</div>
     <div class="pair">
-      <div class="field mono"><label>Serveur IMAP</label><input id="aImap" placeholder="imap.exemple.fr"></div>
-      <div class="field mono"><label>Port</label><input id="aImapPort" placeholder="993"></div>
+      <div class="champ mono"><label>Serveur IMAP</label><input id="aImap" placeholder="imap.exemple.fr"></div>
+      <div class="champ mono"><label>Port</label><input id="aImapPort" placeholder="993"></div>
     </div>
     <div class="pair">
-      <div class="field mono"><label>Serveur SMTP</label><input id="aSmtp" placeholder="smtp.exemple.fr"></div>
-      <div class="field mono"><label>Port</label><input id="aSmtpPort" placeholder="465"></div>
+      <div class="champ mono"><label>Serveur SMTP</label><input id="aSmtp" placeholder="smtp.exemple.fr"></div>
+      <div class="champ mono"><label>Port</label><input id="aSmtpPort" placeholder="465"></div>
     </div>
     <div class="duo">
-      <div class="field"><label>Chiffrement IMAP</label><select id="aTls"><option value="1">TLS implicite (993)</option><option value="0">Sans TLS</option></select></div>
-      <div class="field"><label>Certificat</label><select id="aCert"><option value="1">Vérifier</option><option value="0">Accepter un auto-signé</option></select></div>
+      <div class="champ"><label>Chiffrement IMAP</label><select id="aTls"><option value="1">TLS implicite (993)</option><option value="0">STARTTLS (143)</option></select></div>
+      <div class="champ"><label>Certificat</label><select id="aCert"><option value="1">Vérifier (autorité reconnue)</option><option value="0">Épingler son empreinte</option></select></div>
+    </div>
+    <div class="duo hidden" id="aPins">
+      <div class="champ mono"><label>Empreinte SHA-256 · IMAP</label><input id="aImapPin" placeholder="AB:CD:… (Tester la donne)" spellcheck="false"></div>
+      <div class="champ mono"><label>Empreinte SHA-256 · SMTP</label><input id="aSmtpPin" placeholder="AB:CD:…" spellcheck="false"></div>
     </div>
     <div class="duo">
-      <div class="field mono"><label>Dossier relevé</label><input id="aFolder" placeholder="INBOX"></div>
-      <div class="field"><label>Après lecture</label><select id="aSeen"><option value="1">Marquer comme lu</option><option value="0">Laisser non lu</option></select></div>
+      <div class="champ mono"><label>Dossier relevé</label><input id="aFolder" placeholder="INBOX"></div>
+      <div class="champ"><label>Après lecture</label><select id="aSeen"><option value="1">Marquer comme lu</option><option value="0">Laisser non lu</option></select></div>
     </div>
 
     <div class="sect">Usage de la boîte</div>
@@ -280,17 +278,17 @@
       <button type="button" data-kind="mail" class="on"><svg class="i sm" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="2.4"/><path d="M3.8 7.2 12 13l8.2-5.8"/></svg>Courrier</button>
       <button type="button" data-kind="tickets"><svg class="i sm" viewBox="0 0 24 24"><rect x="3.5" y="5.5" width="17" height="13" rx="2.4"/><path d="M8 5.5v13M11.5 9.5h6M11.5 13h4"/></svg>Boîte à tickets</button>
     </div>
-    <div id="kindNote" class="hidden" style="margin-top:10px">
+    <div id="kindNote" class="espace-p hidden">
       <div class="switchrow"><div><strong>Un ticket par message</strong><small>Le service vient de l'alias visé, l'urgence de son réglage.</small></div><div class="toggle on dead"><i></i></div></div>
     </div>
-    <div class="switchrow" style="margin-top:8px">
+    <div class="espace-pp switchrow">
       <div><strong>N'accepter que les alias</strong><small>Ce qui arrive sur l'adresse principale sans viser un alias déclaré est ignoré.</small></div>
       <div class="toggle" id="aOnly"><i></i></div>
     </div>
 
     <div class="sect" id="aliasSect">Alias</div>
     <div id="aliasEditor"></div>
-    <p style="margin:2px 0 8px;color:var(--faint);font-size:11.5px">L'envoi depuis un alias passe par la session SMTP de la boîte. Tous les fournisseurs ne l'autorisent pas.</p>
+    <p class="aide">L'envoi depuis un alias passe par la session SMTP de la boîte. Tous les fournisseurs ne l'autorisent pas.</p>
     <button class="ajout" type="button" id="addAlias"><svg class="i sm" viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg>Ajouter un alias</button>
   </div>
   <footer>
@@ -310,10 +308,10 @@
   </header>
   <div class="body">
     <div class="duo">
-      <div class="field"><label>Service</label><input id="tService" placeholder="nom du service"></div>
-      <div class="field mono"><label>Machine</label><input id="tHost" placeholder="hôte ou IP"></div>
+      <div class="champ"><label>Service</label><input id="tService" placeholder="nom du service"></div>
+      <div class="champ mono"><label>Machine</label><input id="tHost" placeholder="hôte ou IP"></div>
     </div>
-    <div class="field"><label>Problème</label><input id="tSubj" required></div>
+    <div class="champ"><label>Problème</label><input id="tSubj" required></div>
     <div class="sect">Urgence</div>
     <div class="seg urgseg" id="urgSeg">
       <button type="button" data-urg="basse">Basse</button>
@@ -327,7 +325,7 @@
       <button type="button" data-st="cours">En cours</button>
       <button type="button" data-st="traite">Traité</button>
     </div>
-    <div class="field" style="margin-top:16px"><label>Notes</label><textarea id="tNotes" rows="3"></textarea></div>
+    <div class="espace champ"><label>Notes</label><textarea id="tNotes" rows="3"></textarea></div>
     <div id="tkHistWrap" class="hidden"><div class="sect">Historique</div><ul class="hist" id="tkHist"></ul></div>
   </div>
   <footer>
@@ -345,27 +343,27 @@
     <button class="ghost" type="button" data-close-rule><svg class="i" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button>
   </header>
   <div class="body">
-    <div class="field"><label>Nom</label><input id="rName" placeholder="Mettre les rapports en sourdine" required></div>
+    <div class="champ"><label>Nom</label><input id="rName" placeholder="Mettre les rapports en sourdine" required></div>
     <div class="sect">Conditions</div>
     <div class="seg" id="rMode">
       <button type="button" data-mode="all" class="on">Toutes remplies</button>
       <button type="button" data-mode="any">Au moins une</button>
     </div>
-    <div id="rConds" style="margin-top:10px"></div>
+    <div id="rConds" class="espace-p"></div>
     <button class="ajout" type="button" id="rAddCond"><svg class="i sm" viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg>Ajouter une condition</button>
 
     <div class="sect">Actions</div>
     <div class="duo">
-      <div class="field"><label>Déplacer vers</label><select id="rFolder"></select></div>
-      <div class="field"><label>Marquer</label><select id="rRead"><option value="">ne rien changer</option><option value="1">comme lu</option><option value="0">comme non lu</option></select></div>
+      <div class="champ"><label>Déplacer vers</label><select id="rFolder"></select></div>
+      <div class="champ"><label>Marquer</label><select id="rRead"><option value="">ne rien changer</option><option value="1">comme lu</option><option value="0">comme non lu</option></select></div>
     </div>
     <div class="duo">
-      <div class="field"><label>Ticket</label><select id="rTicket"><option value="">comportement par défaut</option><option value="oui">forcer la création</option><option value="non">ne pas créer</option></select></div>
-      <div class="field"><label>Urgence imposée</label><select id="rUrg"><option value="">aucune</option><option value="basse">Basse</option><option value="normale">Normale</option><option value="haute">Haute</option><option value="crit">Critique</option></select></div>
+      <div class="champ"><label>Ticket</label><select id="rTicket"><option value="">comportement par défaut</option><option value="oui">forcer la création</option><option value="non">ne pas créer</option></select></div>
+      <div class="champ"><label>Urgence imposée</label><select id="rUrg"><option value="">aucune</option><option value="basse">Basse</option><option value="normale">Normale</option><option value="haute">Haute</option><option value="crit">Critique</option></select></div>
     </div>
-    <div class="field"><label>Service imposé</label><input id="rService" placeholder="laisser vide pour garder celui de l'alias"></div>
+    <div class="champ"><label>Service imposé</label><input id="rService" placeholder="laisser vide pour garder celui de l'alias"></div>
     <div class="switchrow"><div><strong>Supprimer le message</strong><small>Il n'est ni stocké ni transformé en ticket.</small></div><div class="toggle" id="rDelete"><i></i></div></div>
-    <div class="switchrow" style="margin-top:8px"><div><strong>Arrêter là</strong><small>Les règles suivantes ne seront pas évaluées.</small></div><div class="toggle" id="rStop"><i></i></div></div>
+    <div class="espace-pp switchrow"><div><strong>Arrêter là</strong><small>Les règles suivantes ne seront pas évaluées.</small></div><div class="toggle" id="rStop"><i></i></div></div>
   </div>
   <footer>
     <button class="btn quiet left" type="button" id="rEssai">Essayer à blanc</button>
@@ -382,10 +380,10 @@
     <button class="ghost" type="button" data-close-reply><svg class="i" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button>
   </header>
   <div class="body">
-    <div class="field"><label>Expéditeur</label><select id="rFrom"></select></div>
-    <div class="field mono"><label>Destinataire</label><input id="rTo" required></div>
-    <div class="field"><label>Objet</label><input id="rSubj" required></div>
-    <div class="field"><label>Message</label><textarea id="rText" rows="7"></textarea></div>
+    <div class="champ"><label>Expéditeur</label><select id="rFrom"></select></div>
+    <div class="champ mono"><label>Destinataire</label><input id="rTo" required></div>
+    <div class="champ"><label>Objet</label><input id="rSubj" required></div>
+    <div class="champ"><label>Message</label><textarea id="rText" rows="7"></textarea></div>
     <div class="err" id="replyErr"></div>
   </div>
   <footer>
@@ -395,6 +393,5 @@
 </form></div>
 
 <div class="toast" id="toast"></div>
-<script src="/app.js"></script>
 </body>
 </html>

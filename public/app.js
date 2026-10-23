@@ -1,4 +1,10 @@
-'use strict';
+// Interface de CACHET. La porte du socle gère la connexion (mot de passe,
+// clés d'accès, second facteur) ; tout ce qui suit suppose une session
+// complète, et le serveur revérifie chaque droit. Le corps HTML d'un message
+// n'est jamais injecté comme balisage : il est relu par le navigateur dans un
+// document inerte, puis reconstruit élément par élément sur une liste blanche.
+import { Api, porte, pageSecurite, pageComptes, appliquerTheme, estSombre, confirmer, dialogue, h } from '/socle/compte.js';
+
 /* ══ constantes ════════════════════════════════════════ */
 const URG = { basse: 'Basse', normale: 'Normale', haute: 'Haute', crit: 'Critique' };
 const STATUS = { nouveau: 'Nouveau', cours: 'En cours', traite: 'Traité' };
@@ -33,16 +39,16 @@ let view = { page: 'intake', intakeAlias: 'all', mailAcct: 'all', folder: 'all',
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-async function api(method, path, body) {
-  const res = await fetch(path, {
-    method,
-    headers: body ? { 'content-type': 'application/json' } : undefined,
-    body: body ? JSON.stringify(body) : undefined
-  });
-  if (res.status === 401) { showGate(); throw new Error('Session expirée'); }
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Erreur ${res.status}`);
-  return data;
+// Le client du socle : jeton anti-CSRF, confirmation d'identité demandée par
+// le serveur (renfort, dévoilement), retour à la porte si la session tombe.
+const socle = new Api({ surDeconnexion: () => location.reload() });
+const api = (method, path, body) => socle.req(method, path, body);
+
+// Une question à une ligne : le nom d'un dossier.
+async function demander(titre, libelle) {
+  const champ = h('input', { class: 'field', type: 'text', 'aria-label': libelle, placeholder: libelle, maxlength: '60' });
+  const ok = await dialogue({ titre, contenu: [champ], boutons: [{ texte: 'Annuler', classe: 'flat', valeur: false }, { texte: 'Créer', classe: 'solid', valeur: true }] });
+  return ok ? champ.value.trim() : '';
 }
 
 let toastTimer;
@@ -120,28 +126,8 @@ function menu(x, y, items) {
   menuOuvert = el;
 }
 
-/* ══ connexion ═════════════════════════════════════════ */
-function showGate() { $('gate').classList.remove('hidden'); $('app').classList.add('hidden'); }
-function showApp() { $('gate').classList.add('hidden'); $('app').classList.remove('hidden'); }
-
-$('loginForm').addEventListener('submit', async e => {
-  e.preventDefault();
-  $('gateErr').textContent = '';
-  try {
-    await api('POST', '/api/login', { password: $('gatePass').value, code: $('gateTotp').value });
-    // Le mot de passe peut être bon et la session quand même perdue : cookie Secure
-    // refusé par le navigateur en HTTP. On le dit au lieu de reboucler en silence.
-    const check = await (await fetch('/api/session')).json();
-    if (!check.authenticated) {
-      $('gateErr').innerHTML = 'Mot de passe correct, mais le navigateur a refusé le cookie de session.<br>'
-        + 'Vous êtes en HTTP sans TLS : ajoutez <code>CACHET_INSECURE_COOKIE=1</code>, ou passez en HTTPS.';
-      return;
-    }
-    $('gatePass').value = ''; $('gateTotp').value = '';
-    showApp(); await refresh(); startClock();
-  } catch (err) { $('gateErr').textContent = err.message; }
-});
-$('logout').addEventListener('click', async () => { await api('POST', '/api/logout'); showGate(); });
+/* ══ déconnexion ═══════════════════════════════════════ */
+$('logout').addEventListener('click', async () => { try { await api('POST', '/api/compte/deconnexion'); } finally { location.reload(); } });
 
 /* ══ navigation ════════════════════════════════════════ */
 function aller(page, bouton) {
@@ -149,6 +135,9 @@ function aller(page, bouton) {
   document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('on'));
   if (bouton) bouton.classList.add('on');
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('on', p.id === 'p-' + page));
+  // Les pages des comptes viennent du socle : construites à l'ouverture, à jour.
+  if (page === 'comptes') $('p-comptes').replaceChildren(pageComptes(socle, { service: 'CACHET' }));
+  if (page === 'securite') $('p-securite').replaceChildren(pageSecurite(socle, { service: 'CACHET' }));
   window.scrollTo(0, 0);
 }
 document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => aller(b.dataset.go, b)));
@@ -157,12 +146,12 @@ $('navSent').onclick = () => {
   aller('mail', $('navSent'));
   renderMailPage();
 };
+// Clair ou sombre : le même choix que la porte et les autres services du socle.
 $('mode').addEventListener('click', () => {
-  const r = document.documentElement;
-  r.dataset.theme = r.dataset.theme === 'light' ? 'dark' : 'light';
-  localStorage.setItem('cachet-theme', r.dataset.theme);
+  document.documentElement.dataset.theme = estSombre() ? 'light' : 'dark';
+  try { localStorage.setItem('theme', document.documentElement.dataset.theme); } catch { /* stockage indisponible */ }
+  appliquerTheme();
 });
-document.documentElement.dataset.theme = localStorage.getItem('cachet-theme') || 'light';
 $('q').addEventListener('input', e => { view.q = e.target.value.toLowerCase(); renderTickets(); renderIntake(); });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') ['acctScrim', 'tkScrim', 'ruleScrim', 'replyScrim'].forEach(s => $(s).classList.remove('on'));
@@ -213,7 +202,7 @@ function renderFolders() {
   const nav = $('folderNav');
   const dossiers = S.folders || [];
   if (!dossiers.length) {
-    nav.innerHTML = '<p style="padding:2px 10px;color:var(--faint);font-size:11.5px">Aucun dossier</p>';
+    nav.innerHTML = '<p class="vide-nav">Aucun dossier</p>';
     return;
   }
   nav.innerHTML = dossiers.map(f => {
@@ -231,7 +220,7 @@ function renderFolders() {
       const f = (S.folders || []).find(x => x.id === b.dataset.folder);
       menu(e.clientX, e.clientY, [{
         label: `Supprimer « ${f.name} »`, danger: true, action: async () => {
-          if (!confirm(`Supprimer le dossier « ${f.name} » ? Les messages qu'il contient ne sont pas supprimés.`)) return;
+          if (!await confirmer(`Supprimer le dossier « ${f.name} » ?`, 'Les messages qu’il contient ne sont pas supprimés.', { danger: true, oui: 'Supprimer' })) return;
           await api('DELETE', '/api/folders/' + f.id);
           if (view.folder === f.id) view.folder = 'all';
           toast('Dossier supprimé'); await refresh();
@@ -241,9 +230,9 @@ function renderFolders() {
   });
 }
 $('addFolder').onclick = async () => {
-  const nom = prompt('Nom du dossier');
-  if (!nom || !nom.trim()) return;
-  try { await api('POST', '/api/folders', { name: nom.trim() }); toast('Dossier créé'); await refresh(); }
+  const nom = await demander('Nouveau dossier', 'Nom du dossier');
+  if (!nom) return;
+  try { await api('POST', '/api/folders', { name: nom }); toast('Dossier créé'); await refresh(); }
   catch (e) { toast(e.message); }
 };
 
@@ -352,8 +341,8 @@ function renderReader(el, noteEl, m) {
   const aHtml = Boolean(m.html);
   const brut = view.html[m.id] === 'texte';
   const corps = (aHtml && !brut)
-    ? `<div class="bodyhtml">${m.html}</div>`
-    : `<div class="bodytext">${esc(m.text || '(corps vide)')}</div>`;
+    ? '<div class="bodyhtml" data-corps></div>'
+    : `<p class="bodytext">${esc(m.text || '(corps vide)')}</p>`;
   const bascule = aHtml
     ? `<button class="bascule" type="button" data-bascule>${brut ? 'Afficher la mise en forme' : 'Afficher en texte brut'}${m.imagesMasquees ? ` · ${m.imagesMasquees} image(s) bloquée(s)` : ''}</button>`
     : '';
@@ -364,23 +353,24 @@ function renderReader(el, noteEl, m) {
   el.innerHTML = `
     ${t ? `<button class="linkbar" type="button" data-tk="${t.id}">${ICON.ticket}
       <span><b>${t.id} · ${STATUS[t.status]}</b><span>${esc(t.service)} · urgence ${URG[t.urgency].toLowerCase()}${t.occurrences > 1 ? ` · ${t.occurrences} occurrences` : ''}</span></span>
-      <svg class="i sm" viewBox="0 0 24 24" style="margin-left:auto"><path d="M9 5.5 15.5 12 9 18.5"/></svg></button>` : ''}
+      <svg class="i sm pousse" viewBox="0 0 24 24"><path d="M9 5.5 15.5 12 9 18.5"/></svg></button>` : ''}
     <h3>${esc(m.subject)}</h3>
     <div class="meta">
       <span class="itile ini ${tone(m.fromAddr)}">${esc(initials(m.fromName, m.fromAddr))}</span>
       <span><b>${esc(m.fromName || '')}</b><span>${esc(m.fromAddr)}</span></span>
-      <span style="margin-left:auto" class="cell-mono">${clock(m.receivedAt)}</span>
+      <span class="pousse cell-mono">${clock(m.receivedAt)}</span>
     </div>
     ${bascule}
     ${corps}
-    <div style="margin-top:14px;font-size:11.5px;color:var(--faint)">
+    <div class="dests">
       ${dests.map(d => `<span class="mini ${connus.includes(d) ? 'tk' : ''}">${esc(d)}</span>`).join(' ') || 'aucun destinataire lisible'}
     </div>
     <div class="toolbar">
-      <button class="btn sm" type="button" data-reply><svg class="i sm" viewBox="0 0 24 24"><path d="M9 7 4.5 11.5 9 16"/><path d="M4.5 11.5H14a5.5 5.5 0 0 1 5.5 5.5v1.5"/></svg>Répondre depuis ${esc(from ? from.split('@')[0] + '@' : '—')}</button>
+      <button class="btn sm" type="button" data-reply><svg class="i sm" viewBox="0 0 24 24"><path d="M9 7 4.5 11.5 9 16"/><path d="M4.5 11.5H14a5.5 5.5 0 0 1 5.5 5.5v1.5"/></svg>Répondre<span class="depuis"> depuis ${esc(from ? from.split('@')[0] + '@' : '—')}</span></button>
       ${t ? `<button class="btn sm" type="button" data-tk="${t.id}">${ICON.ticket}Voir ${t.id}</button>` : ''}
     </div>`;
 
+  el.querySelector('[data-corps]')?.append(htmlSur(m.html));
   el.querySelectorAll('[data-tk]').forEach(b => b.onclick = () => openTicket(b.dataset.tk));
   const rep = el.querySelector('[data-reply]');
   if (rep) rep.onclick = () => openReply(m, from);
@@ -389,6 +379,33 @@ function renderReader(el, noteEl, m) {
     view.html[m.id] = brut ? 'html' : 'texte';
     renderReader(el, noteEl, m);
   };
+}
+
+// Le HTML d'un message, déjà nettoyé par le serveur, est relu ici dans un
+// document inerte (rien ne s'y charge ni ne s'y exécute) et reconstruit : les
+// balises de mise en forme seules, aucun attribut sinon la cible d'un lien
+// http(s), mailto ou tel. Une seconde barrière, indépendante de la première.
+const BALISES_SURES = new Set(['p', 'br', 'hr', 'div', 'span', 'section', 'article', 'b', 'strong', 'i', 'em', 'u', 's', 'strike', 'del', 'ins', 'mark', 'small', 'sub', 'sup',
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'dl', 'dt', 'dd', 'blockquote', 'q', 'cite', 'pre', 'code', 'kbd', 'samp', 'a', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th', 'caption']);
+function htmlSur(source) {
+  const doc = new DOMParser().parseFromString(String(source || ''), 'text/html');
+  const copier = (noeud, profondeur) => {
+    if (noeud.nodeType === Node.TEXT_NODE) return document.createTextNode(noeud.nodeValue);
+    if (noeud.nodeType !== Node.ELEMENT_NODE || profondeur > 40) return null;
+    const nom = noeud.localName;
+    const enfants = [...noeud.childNodes].map(n => copier(n, profondeur + 1)).filter(Boolean);
+    if (!BALISES_SURES.has(nom)) { const f = document.createDocumentFragment(); f.append(...enfants); return f; }
+    const el = document.createElement(nom);
+    if (nom === 'a') {
+      const href = noeud.getAttribute('href') || '';
+      if (/^(https?:|mailto:|tel:)/i.test(href.trim())) { el.href = href.trim(); el.target = '_blank'; el.rel = 'noopener noreferrer nofollow'; }
+    }
+    el.append(...enfants);
+    return el;
+  };
+  const f = document.createDocumentFragment();
+  f.append(...[...doc.body.childNodes].map(n => copier(n, 0)).filter(Boolean));
+  return f;
 }
 
 function menuMessage(e, m) {
@@ -424,7 +441,7 @@ function menuMessage(e, m) {
   items.push({
     label: 'Supprimer le message', danger: true,
     action: async () => {
-      if (!confirm('Supprimer ce message ?' + (t ? `\nLe ticket ${t.id} est conservé.` : ''))) return;
+      if (!await confirmer('Supprimer ce message ?', t ? `Le ticket ${t.id} est conservé.` : '', { danger: true, oui: 'Supprimer' })) return;
       await api('DELETE', '/api/messages/' + encodeURIComponent(m.id));
       toast('Message supprimé'); await refresh();
     }
@@ -448,7 +465,7 @@ function renderTickets() {
     const items = S.tickets.filter(t => t.status === st && match(t));
     $(notes[st]).textContent = items.length;
     const box = $(cols[st]);
-    if (!items.length) { box.innerHTML = `<div class="empty" style="padding:28px 20px"><p>Aucun ticket ici.</p></div>`; continue; }
+    if (!items.length) { box.innerHTML = `<div class="empty serre"><p>Aucun ticket ici.</p></div>`; continue; }
     box.innerHTML = items.map(t => `
       <button class="tk ${t.urgency}" type="button" data-tk="${t.id}">
         <span class="top"><span class="id">${t.id}</span><span class="svc">${esc(t.service)}</span>
@@ -508,24 +525,24 @@ function renderAccounts() {
     const als = aliasesOf(a);
     html += `<tr data-arow="${a.id}">
       <td><div class="who-cell">
-        ${als.length ? `<button class="chev ${openAliases.has(a.id) ? 'open' : ''}" type="button" data-chev="${a.id}"><svg class="i sm" viewBox="0 0 24 24"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg></button>` : '<span style="width:24px;flex:none"></span>'}
+        ${als.length ? `<button class="chev ${openAliases.has(a.id) ? 'open' : ''}" type="button" data-chev="${a.id}"><svg class="i sm" viewBox="0 0 24 24"><path d="M9.5 5.5 16 12l-6.5 6.5"/></svg></button>` : '<span class="cale"></span>'}
         <span class="itile mono ${isIntake(a) ? 'amber' : ''}">${p.mono}</span>
         <span><b>${esc(a.name)}</b><span>${esc(a.addr)}</span></span></div></td>
-      <td class="cell-mono">${esc(a.imapHost || '—')}:${a.imapPort}</td>
-      <td>${isIntake(a) ? '<span class="pill amber">Boîte à tickets</span>' : '<span class="pill">Courrier</span>'}</td>
-      <td>${isIntake(a)
+      <td class="cell-mono col-cache">${esc(a.imapHost || '—')}:${a.imapPort}</td>
+      <td class="col-cache2">${isIntake(a) ? '<span class="pill amber">Boîte à tickets</span>' : '<span class="pill">Courrier</span>'}</td>
+      <td class="col-cache">${isIntake(a)
         ? `<span class="chain">${als.length} alias<span class="arrow">→</span><span class="mk">un ticket par message</span>${a.aliasOnly ? '<span class="arrow">·</span>alias seulement' : ''}</span>`
         : '<span class="cell-muted">Livré dans la boîte</span>'}</td>
-      <td><span class="tag ${a.lastError ? 'held' : a.lastOk ? '' : 'idle'}"><i class="d"></i>${a.lastError ? 'erreur' : a.lastOk ? 'relevée ' + ago(a.lastOk) : 'jamais relevée'}</span></td>
+      <td class="col-cache2"><span class="tag ${a.lastError ? 'held' : a.lastOk ? '' : 'idle'}"><i class="d"></i>${a.lastError ? 'erreur' : a.lastOk ? 'relevée ' + ago(a.lastOk) : 'jamais relevée'}</span></td>
       <td class="cell-right"><button class="btn quiet sm" data-acct="${a.id}">Modifier</button></td>
     </tr>`;
     if (als.length && openAliases.has(a.id)) {
       html += als.map(al => `<tr class="sub">
         <td><div class="al"><span class="twig"></span><span class="addr">${esc(al.addr)}</span></div></td>
-        <td class="cell-muted">alias</td>
-        <td><span class="pill">${esc(al.svc)}</span></td>
-        <td><span class="chain">ticket<span class="arrow">→</span><span class="mk">${URG[al.urg].toLowerCase()}</span>${al.send !== false ? '<span class="arrow">·</span>envoi ok' : ''}</span></td>
-        <td><span class="tag ${al.active !== false ? '' : 'idle'}"><i class="d"></i>${al.active !== false ? 'actif' : 'inactif'}</span></td>
+        <td class="cell-muted col-cache">alias</td>
+        <td class="col-cache2"><span class="pill">${esc(al.svc)}</span></td>
+        <td class="col-cache"><span class="chain">ticket<span class="arrow">→</span><span class="mk">${URG[al.urg].toLowerCase()}</span>${al.send !== false ? '<span class="arrow">·</span>envoi ok' : ''}</span></td>
+        <td class="col-cache2"><span class="tag ${al.active !== false ? '' : 'idle'}"><i class="d"></i>${al.active !== false ? 'actif' : 'inactif'}</span></td>
         <td class="cell-right"><button class="btn quiet sm" data-acct="${a.id}">Régler</button></td>
       </tr>`).join('');
     }
@@ -558,7 +575,7 @@ function menuCompte(e, a) {
       } },
     { label: 'Relever maintenant', icon: ICON.route, action: () => doPoll() },
     { label: 'Relever depuis zéro', action: async () => {
-        if (!confirm('Reprendre les 20 derniers messages, lus ou non ?')) return;
+        if (!await confirmer('Relever depuis zéro ?', 'Les 20 derniers messages sont repris, lus ou non.')) return;
         const r = await api('POST', `/api/accounts/${a.id}/rescan`);
         toast(r.error ? `Erreur : ${r.error}` : `${r.fetched} message(s) repris`);
         await refresh();
@@ -573,13 +590,13 @@ function menuCompte(e, a) {
       } },
     { label: 'Purger les messages hors alias', danger: true, disabled: !a.aliasOnly,
       action: async () => {
-        if (!confirm('Retirer les messages qui ne visaient aucun alias ?\nLeurs tickets partent aussi.')) return;
+        if (!await confirmer('Retirer les messages qui ne visaient aucun alias ?', 'Leurs tickets partent aussi.', { danger: true, oui: 'Retirer' })) return;
         const r = await api('POST', '/api/messages/purge-hors-alias?avecTickets=1');
         toast(`${r.retires} message(s) retiré(s)`); await refresh();
       } },
     { sep: true },
     { label: 'Supprimer la boîte', danger: true, action: async () => {
-        if (!confirm(`Supprimer ${a.addr} ? Les tickets déjà ouverts restent.`)) return;
+        if (!await confirmer(`Supprimer ${a.addr} ?`, 'Les tickets déjà ouverts restent.', { danger: true, oui: 'Supprimer' })) return;
         await api('DELETE', `/api/accounts/${a.id}`);
         toast('Boîte supprimée'); await refresh();
       } }
@@ -592,8 +609,8 @@ function renderLog() {
   const pill = k => k === 'ticket' ? 'pill amber' : k === 'erreur' ? 'pill bad'
     : k === 'envoi' ? 'pill out' : 'pill';
   $('logBody').innerHTML = S.log.length ? S.log.map(l => `<tr>
-    <td class="cell-mono">${esc(l.from || '—')}</td>
-    <td class="cell-muted">${esc(l.to || '—')}</td>
+    <td class="cell-mono col-cache2">${esc(l.from || '—')}</td>
+    <td class="cell-muted col-cache">${esc(l.to || '—')}</td>
     <td><span class="${pill(l.kind)}">${esc(l.what)}</span></td>
     <td class="cell-right cell-mono">${new Date(l.at).toLocaleTimeString('fr-FR')}</td>
   </tr>`).join('') : `<tr><td colspan="4"><div class="empty"><p>Rien encore.</p></div></td></tr>`;
@@ -634,7 +651,7 @@ function renderRules() {
       <div class="toggle ${r.enabled !== false ? 'on' : ''}" data-bascule="${r.id}"><i></i></div>
       <span class="itile ${r.actions && r.actions.delete ? 'hot' : 'key'}">${ICON.route}</span>
       <div><strong>${esc(r.name)}</strong><span class="chain">${esc(c)}<span class="arrow">→</span><span class="mk">${esc(a)}</span></span></div>
-      <div class="stat"><b>${r.enabled !== false ? 'active' : 'en pause'}</b>clic droit</div>
+      <div class="stat col-cache2"><b>${r.enabled !== false ? 'active' : 'en pause'}</b>clic droit</div>
     </div>`;
   }).join('');
   box.querySelectorAll('[data-bascule]').forEach(t => t.onclick = async e => {
@@ -654,7 +671,7 @@ function renderRules() {
         { label: 'Essayer à blanc', action: () => essaiRegle(r) },
         { sep: true },
         { label: 'Supprimer la règle', danger: true, action: async () => {
-            if (!confirm(`Supprimer « ${r.name} » ?`)) return;
+            if (!await confirmer(`Supprimer « ${r.name} » ?`, '', { danger: true, oui: 'Supprimer' })) return;
             await api('DELETE', '/api/rules/' + r.id); toast('Règle supprimée'); await refresh();
           } }
       ]);
@@ -776,7 +793,7 @@ $('aOnly').onclick = function () { this.classList.toggle('on'); };
 function renderAliasEditor() {
   const box = $('aliasEditor');
   if (!draft.aliases.length) {
-    box.innerHTML = `<p style="margin:0 0 8px;color:var(--muted);font-size:12.5px">Aucun alias.</p>`;
+    box.innerHTML = '<p class="vide-alias">Aucun alias.</p>';
     return;
   }
   box.innerHTML = draft.aliases.map((al, i) => `
@@ -813,7 +830,10 @@ function openAccount(id) {
   $('aFolder').value = a?.folder || 'INBOX';
   $('aSeen').value = a?.markSeen === false ? '0' : '1';
   $('aTls').value = a?.imapTls === false ? '0' : '1';
-  $('aCert').value = a?.insecureTls ? '0' : '1';
+  $('aCert').value = a?.imapPin || a?.smtpPin ? '0' : '1';
+  $('aImapPin').value = a?.imapPin === 'premiere' ? '' : (a?.imapPin || '');
+  $('aSmtpPin').value = a?.smtpPin === 'premiere' ? '' : (a?.smtpPin || '');
+  $('aPins').classList.toggle('hidden', $('aCert').value === '1');
   $('aOnly').classList.toggle('on', Boolean(a?.aliasOnly));
   $('acctSheetTitle').textContent = a ? 'Modifier la boîte' : 'Ajouter une boîte';
   $('acctSheetSub').textContent = a ? a.addr : 'IMAP et SMTP';
@@ -825,6 +845,7 @@ function openAccount(id) {
   setTimeout(() => $('aName').focus(), 60);
 }
 $('addAccount').onclick = () => openAccount(null);
+$('aCert').onchange = () => $('aPins').classList.toggle('hidden', $('aCert').value === '1');
 document.querySelectorAll('[data-close-acct]').forEach(b => b.onclick = () => acctScrim.classList.remove('on'));
 acctScrim.onclick = e => { if (e.target === acctScrim) acctScrim.classList.remove('on'); };
 
@@ -835,7 +856,9 @@ $('acctSheet').addEventListener('submit', async e => {
     imapUser: $('aUser').value.trim(), imapHost: $('aImap').value.trim(), imapPort: +$('aImapPort').value || 993,
     smtpHost: $('aSmtp').value.trim(), smtpPort: +$('aSmtpPort').value || 465,
     folder: $('aFolder').value.trim() || 'INBOX', markSeen: $('aSeen').value === '1',
-    imapTls: $('aTls').value === '1', insecureTls: $('aCert').value === '0',
+    imapTls: $('aTls').value === '1',
+    imapPin: $('aCert').value === '0' ? $('aImapPin').value.trim() : '',
+    smtpPin: $('aCert').value === '0' ? $('aSmtpPin').value.trim() : '',
     aliasOnly: $('aOnly').classList.contains('on'),
     provider: draft.provider, kind: draft.kind, aliases: draft.aliases.filter(a => a.addr)
   };
@@ -850,7 +873,7 @@ $('acctSheet').addEventListener('submit', async e => {
   } catch (err) { toast(err.message); }
 });
 $('delAccount').onclick = async () => {
-  if (!confirm('Supprimer cette boîte ? Les tickets déjà ouverts restent.')) return;
+  if (!await confirmer('Supprimer cette boîte ?', 'Les tickets déjà ouverts restent.', { danger: true, oui: 'Supprimer' })) return;
   await api('DELETE', `/api/accounts/${draft.id}`);
   acctScrim.classList.remove('on'); toast('Boîte supprimée'); await refresh();
 };
@@ -859,7 +882,12 @@ $('testAccount').onclick = async () => {
   btn.innerHTML = '<span class="spin"></span> Test…';
   try {
     const r = await api('POST', `/api/accounts/${draft.id}/test`);
-    toast(r.ok ? `Connexion OK · ${r.messages} messages dans le dossier` : `Échec : ${r.error}`);
+    if (r.ok) toast(`Connexion OK · ${r.messages} messages dans le dossier`);
+    else if (r.empreinte && await confirmer('Certificat non reconnu', `Le serveur présente l’empreinte ${r.empreinte}. Si c’est bien ton serveur (vérifie-la sur la machine), épingle-la : seul ce certificat sera accepté.`, { oui: 'Épingler' })) {
+      $('aCert').value = '0'; $('aPins').classList.remove('hidden'); $('aImapPin').value = r.empreinte;
+      await api('PATCH', `/api/accounts/${draft.id}`, { imapPin: r.empreinte });
+      toast('Empreinte épinglée : teste à nouveau');
+    } else if (!r.ok) toast(`Échec : ${r.error}`);
   } catch (e) { toast(e.message); }
   btn.textContent = 'Tester';
   await refresh();
@@ -1026,12 +1054,12 @@ $('apiCopySend').onclick = async () => {
   catch (e) { toast(e.message); }
 };
 $('apiRotate').onclick = async () => {
-  if (!confirm('Régénérer la clé complète ? Les services qui l’utilisent perdront l’accès.')) return;
+  if (!await confirmer('Régénérer la clé complète ?', 'Les services qui l’utilisent perdront l’accès.', { danger: true, oui: 'Régénérer' })) return;
   const r = await api('POST', '/api/apikey/rotate');
   $('apiKey').value = r.key; toast('Nouvelle clé générée');
 };
 $('apiRotateSend').onclick = async () => {
-  if (!confirm('Régénérer la clé d’envoi ? Les services qui l’utilisent ne pourront plus envoyer.')) return;
+  if (!await confirmer('Régénérer la clé d’envoi ?', 'Les services qui l’utilisent ne pourront plus envoyer.', { danger: true, oui: 'Régénérer' })) return;
   const r = await api('POST', '/api/apikey/rotate?quoi=envoi');
   $('apiSendKey').value = r.sendKey; toast('Nouvelle clé d’envoi générée');
 };
@@ -1072,9 +1100,14 @@ $('pollNow2').onclick = () => doPoll();
 
 async function refresh() {
   try {
-    S = await api('GET', '/api/state');
+    // Une réponse tronquée (service qui redémarre) ne remplace pas l'état connu.
+    const neuf = await api('GET', '/api/state');
+    if (!neuf || !Array.isArray(neuf.accounts)) return;
+    S = neuf;
   } catch (e) {
-    if (!/Session expirée/i.test(e.message)) { console.error('[refresh]', e); toast(e.message); }
+    // Réseau coupé ou service qui redémarre : on le dit, et la prochaine relève réessaie.
+    if (e instanceof TypeError) toast('Service injoignable pour l’instant : nouvel essai bientôt.');
+    else if (!/Session expirée/i.test(e.message)) { console.error('[refresh]', e); toast(e.message); }
     return;
   }
   render();
@@ -1099,9 +1132,14 @@ function startClock() {
 // Renseigné tout de suite : cette valeur ne dépend d'aucune donnée du serveur.
 if ($('apiBase')) $('apiBase').value = location.origin + '/api';
 
-(async () => {
-  const s = await api('GET', '/api/session');
-  $('gateTotpField').classList.toggle('hidden', !s.totpEnabled);
-  if (s.authenticated) { showApp(); await refresh(); startClock(); }
-  else { showGate(); $('gatePass').focus(); }
-})();
+appliquerTheme();
+const marque = h('img', { src: '/mark.png', alt: '', width: '18', height: '18', class: 'marque-porte' });
+const etat = await porte({ api: socle, service: 'CACHET', marque, sousTitre: 'arrivée des alertes et suivi des tickets' });
+const role = etat.session.compte.role;
+// Ce que le rôle ne permet pas n'est pas proposé ; le serveur le refuserait.
+document.body.dataset.role = role;
+document.querySelectorAll('[data-admin]').forEach(el => { if (role !== 'admin') el.remove(); });
+document.querySelectorAll('[data-membre]').forEach(el => { if (role === 'lecture') el.remove(); });
+$('app').classList.remove('hidden');
+await refresh();
+startClock();
