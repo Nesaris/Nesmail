@@ -1,30 +1,39 @@
+# CACHET seul, sans le Hub. Le .env porte les réglages (voir .env.example).
+# Le port n'est ouvert que sur l'adresse de CACHET_BIND (127.0.0.1 par défaut :
+# derrière un relais HTTPS sur la même machine).
 services:
   cachet:
     build: .
-    image: cachet:1.0.0
+    image: cachet:2.0.0
     container_name: cachet
     restart: unless-stopped
-
-    # Adresse et port definis une seule fois, dans le .env.
-    #   127.0.0.1 = accessible seulement depuis l'hote (tunnel SSH ou proxy local)
-    #   0.0.0.0   = accessible depuis le reseau
-    # Le port interne du conteneur reste 8787.
     ports:
       - "${CACHET_BIND:-127.0.0.1}:${CACHET_PORT:-8787}:8787"
-
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 256m
+    pids_limit: 128
+    # La clé maîtresse vient d'un secret Docker, jamais du volume qu'elle protège.
+    secrets: [socle_cle]
     environment:
-      CACHET_SECRET: ${CACHET_SECRET:?generez-en un avec  openssl rand -hex 32}
-      CACHET_PASSWORD: ${CACHET_PASSWORD:-}
-      CACHET_TOTP_SECRET: ${CACHET_TOTP_SECRET:-}
-      CACHET_INSECURE_COOKIE: ${CACHET_INSECURE_COOKIE:-}
-
-    # Volume nomme : Docker regle les droits tout seul pour l'uid 10001.
+      SOCLE_CLE_FILE: /run/secrets/socle_cle
+      SOCLE_HTTP: ${SOCLE_HTTP:-0}
+      SOCLE_PROXYS: ${SOCLE_PROXYS:-}
+      SOCLE_URL_PUBLIQUE: ${SOCLE_URL_PUBLIQUE:-}
+      SOCLE_THEME: ${SOCLE_THEME:-soma}
+      CACHET_SECRET_V1: ${CACHET_SECRET_V1:-}
     volumes:
       - cachet-data:/data
-
     logging:
       driver: json-file
-      options: { max-size: "10m", max-file: "3" }
+      options: { max-size: "10m", max-file: "5" }
+
+secrets:
+  socle_cle:
+    file: ./secrets/socle_cle
 
 volumes:
   cachet-data:
