@@ -138,6 +138,24 @@ const corps = await page.locator('#reader .bodyhtml').innerHTML();
 if (/<script|<img|onclick/i.test(corps)) erreurs.push(`corps HTML dangereux rendu : ${corps.slice(0, 200)}`);
 if (!/<b>vous<\/b>/.test(corps)) erreurs.push(`mise en forme perdue : ${corps.slice(0, 200)}`);
 
+// Ce que les gabarits construisent hors des écrans : menu contextuel, réponse,
+// éditeur de règle, chacun rempli et contrôlé à chaque largeur.
+await page.locator('#intakeList .mailrow').first().click({ button: 'right' });
+if (await page.locator('.menu button').count() < 3) erreurs.push('menu contextuel incomplet');
+await page.keyboard.press('Escape');
+await page.mouse.click(2, 2);
+await page.locator('#reader [data-reply]').click();
+await page.locator('#replyScrim.on').waitFor();
+if (!(await page.locator('#rFrom option').count())) erreurs.push('aucun expéditeur proposé');
+await controle(page, 'feuille-reponse');
+await page.keyboard.press('Escape');
+await page.locator('.side').getByRole('button', { name: /^Réglages/ }).click();
+await page.locator('#rulesList [data-rule]').first().click();
+await page.locator('#ruleScrim.on').waitFor();
+if (!(await page.locator('#rConds .cond select option[selected]').count())) erreurs.push('condition de règle sans opérateur choisi');
+await controle(page, 'feuille-regle');
+await page.keyboard.press('Escape');
+
 const defauts = rapport.filter(r => r.defauts.length);
 fs.writeFileSync(`${sortie}/rapport.json`, JSON.stringify({ defauts, erreurs }, null, 2));
 console.log(`${rapport.length} contrôles, ${defauts.length} avec défauts, ${erreurs.length} erreur(s) de console`);
