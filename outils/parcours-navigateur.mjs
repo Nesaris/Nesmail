@@ -18,6 +18,7 @@ const sortie = process.argv[2] || path.join(os.tmpdir(), 'captures-cachet');
 fs.mkdirSync(sortie, { recursive: true });
 const MDP = 'phrase de passe pour cachet en local';
 const JETON = 'jeton-installation-du-parcours-0123456789';
+const SONDE = '<img src=x onerror=window.__xss=1>';
 
 const cert = certificatEssai('localhost');
 tls.setDefaultCACertificates([...tls.getCACertificates('default'), cert.cert]);
@@ -25,6 +26,8 @@ const imap = imapServer([
   makeMessage({ from: 'noreply@sup.exemple.fr', to: 'rmm@exemple.fr', subject: 'Agent hors ligne sur srv01', body: 'Machine : srv01\nDurée : 11 minutes' }),
   makeMessage({ from: 'bot@conteneurs.exemple.fr', to: 'conteneurs@exemple.fr', subject: 'api redémarre en boucle', body: 'Machine : srv01\nCode : 137', encoded: 'multipart' }),
   makeMessage({ from: 'proxy@exemple.fr', to: 'proxy@exemple.fr', subject: 'Certificat renouvelé', body: 'Machine : proxy\nRAS' }),
+  // Sonde : du balisage dans chaque champ affiché. Il doit rester du texte.
+  makeMessage({ from: '"<b>Sonde</b>" <sonde@exemple.fr>', to: 'rmm@exemple.fr', subject: SONDE + ' sonde', body: 'Machine : ' + SONDE + '\n<svg onload=window.__xss=1></svg>', encoded: 'multipart' }),
 ], { mode: 'tls', certificat: cert });
 const portImap = await imap.ecouter();
 
@@ -43,6 +46,8 @@ async function controle(page, nom) {
     const defauts = await page.evaluate(chevauchements);
     const brut = await page.evaluate(() => (document.body.innerText.match(/\b(null|undefined|NaN)\b/) || [])[0]);
     if (brut) defauts.push({ type: 'texte-brut', detail: `« ${brut} » affiché` });
+    const injecte = await page.evaluate(() => (window.__xss ? 1 : 0) + document.querySelectorAll('[onerror],[onload],img[src="x"]').length);
+    if (injecte) defauts.push({ type: 'injection', detail: `${injecte} élément(s) de la sonde interprété(s)` });
     rapport.push({ ecran: nom, largeur: w, defauts });
     if ([360, 1280].includes(w)) await page.screenshot({ path: `${sortie}/${nom}-${w}.png` });
   }
@@ -73,18 +78,24 @@ await page.locator('#app:not(.hidden)').waitFor();
 await page.getByRole('heading', { name: 'Arrivée des tickets' }).waitFor();
 
 // Une boîte à tickets, créée et relevée depuis la session du navigateur.
-await page.evaluate(async port => {
+const graine = await page.evaluate(async ([port, sonde]) => {
   const { session } = await (await fetch('/api/compte/etat')).json();
   const h = { 'Content-Type': 'application/json', 'X-CSRF': session.csrf };
-  await fetch('/api/accounts', { method: 'POST', headers: h, body: JSON.stringify({
+  const refus = [];
+  const poster = async (url, corps) => { const r = await fetch(url, { method: 'POST', headers: h, body: JSON.stringify(corps) }); if (!r.ok) refus.push(`${url} ${r.status}`); };
+  await poster('/api/accounts', {
     name: 'Arrivée', addr: 'alertes@exemple.fr', kind: 'tickets', imapHost: 'localhost', imapPort: port, imapTls: true,
     smtpHost: 'localhost', smtpPort: 465, password: 'mot-de-passe-de-la-boite',
     aliases: [{ addr: 'conteneurs@exemple.fr', svc: 'conteneurs', urg: 'crit' }, { addr: 'rmm@exemple.fr', svc: 'supervision', urg: 'haute' }, { addr: 'proxy@exemple.fr', svc: 'proxy', urg: 'basse', send: false }],
-  }) });
-  await fetch('/api/poll', { method: 'POST', headers: h, body: '{}' });
-  await fetch('/api/folders', { method: 'POST', headers: h, body: JSON.stringify({ name: 'Archives' }) });
-  await fetch('/api/rules', { method: 'POST', headers: h, body: JSON.stringify({ name: 'Certificats en sourdine', conditions: { mode: 'all', items: [{ champ: 'subject', op: 'contient', valeur: 'certificat' }] }, actions: { read: true } }) });
-}, portImap);
+  });
+  await poster('/api/folders', { name: 'Archives' });
+  await poster('/api/folders', { name: sonde });
+  await poster('/api/rules', { name: sonde, conditions: { mode: 'all', items: [{ champ: 'subject', op: 'contient', valeur: 'sonde' }] }, actions: { service: sonde } });
+  await poster('/api/rules', { name: 'Certificats en sourdine', conditions: { mode: 'all', items: [{ champ: 'subject', op: 'contient', valeur: 'certificat' }] }, actions: { read: true } });
+  await poster('/api/poll', {});
+  return refus;
+}, [portImap, SONDE]);
+if (graine.length) throw new Error('semis refusé : ' + graine.join(', '));
 
 const ECRANS = [
   ['Arrivée', 'Arrivée des tickets', 'arrivee'], ['Tickets', 'Tickets', 'tickets'], ['Courrier', 'Courrier', 'courrier'],
