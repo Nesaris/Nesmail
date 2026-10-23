@@ -655,6 +655,18 @@ await t('le rattrapage ouvre les tickets des messages orphelins', async () => {
   assert.ok(r.json.examines >= 1, JSON.stringify(r.json));
   assert.ok((await admin.get('/api/state')).json.messages.find(m => m.id === cible.id).ticketId, 'le message est resté sans ticket');
 });
+await t('clés fausses : chaque échec compte pour l\'adresse, bloquée après dix, à part des connexions humaines', async () => {
+  // Les clés fausses des essais précédents ont déjà compté : on repart de zéro.
+  app.socle.limiteur.liberer('ip:machine:127.0.0.1');
+  try {
+    const codes = [];
+    for (let i = 0; i < 12; i++) codes.push((await cle('pk_' + 'x'.repeat(32) + i, '/api/state')).status);
+    assert.deepEqual(codes, [...Array(10).fill(401), 429, 429], codes.join(' '));
+    assert.equal((await cle(cleComplete, '/api/state')).status, 429, 'la bonne clé passe aussi par le verrou de l\'adresse');
+    assert.equal((await admin.get('/api/state')).status, 200, 'les sessions humaines restent ouvertes');
+  } finally { app.socle.limiteur.liberer('ip:machine:127.0.0.1'); }
+  assert.equal((await cle(cleComplete, '/api/state')).status, 200);
+});
 await t('les données survivent à un redémarrage', async () => {
   const tickets1 = (await admin.get('/api/state')).json.tickets.length;
   await app.arreter();
