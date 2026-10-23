@@ -1,11 +1,15 @@
-'use strict';
-const net = require('node:net');
+// Serveur IMAP d'essai : TLS implicite, STARTTLS, ou en clair sans STARTTLS
+// (pour vérifier que CACHET n'y envoie rien). Le certificat vient de
+// certificatEssai (openssl, à la volée).
+import net from 'node:net';
+import tls from 'node:tls';
+import crypto from 'node:crypto';
 
-function makeMessage({ from, to, subject, body, encoded }) {
+export function makeMessage({ from, to, subject, body, encoded }) {
   const lines = [
     `Return-Path: <${from}>`, `Delivered-To: ${to}`, `From: ${from}`, `To: ${to}`,
     `Subject: ${subject}`, `Date: ${new Date().toUTCString()}`,
-    `Message-ID: <${Math.random().toString(36).slice(2)}@mock>`, 'MIME-Version: 1.0'
+    `Message-ID: <${crypto.randomBytes(6).toString('hex')}@mock>`, 'MIME-Version: 1.0'
   ];
   if (encoded === 'b64') {
     lines.push('Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: base64', '',
@@ -25,11 +29,12 @@ function makeMessage({ from, to, subject, body, encoded }) {
   return lines.join('\r\n');
 }
 
-function imapServer(messages, opts = {}) {
+export function imapServer(messages, { badLogin = false, mode = 'tls', certificat = null } = {}) {
   const store = messages.map((m, i) => ({ uid: i + 1, raw: m, flags: [] }));
-  const server = net.createServer(sock => {
+  const commandes = [];
+
+  function servir(sock, chiffre) {
     sock.setEncoding('binary');
-    sock.write('* OK Mock IMAP ready\r\n');
     let buf = '';
     sock.on('data', d => {
       buf += d;
@@ -39,9 +44,16 @@ function imapServer(messages, opts = {}) {
         const [tag, cmd, ...rest] = line.split(' ');
         const up = (cmd || '').toUpperCase();
         const arg = rest.join(' ');
+        commandes.push({ chiffre, up });
 
-        if (up === 'LOGIN') {
-          if (opts.badLogin) { sock.write(`${tag} NO [AUTHENTICATIONFAILED] mot de passe refusé\r\n`); continue; }
+        if (up === 'STARTTLS') {
+          if (mode !== 'starttls' || chiffre) { sock.write(`${tag} BAD STARTTLS indisponible\r\n`); continue; }
+          sock.write(`${tag} OK Begin TLS negotiation now\r\n`);
+          sock.removeAllListeners('data');
+          servir(new tls.TLSSocket(sock, { isServer: true, key: certificat.cle, cert: certificat.cert }), true);
+          return;
+        } else if (up === 'LOGIN') {
+          if (badLogin) { sock.write(`${tag} NO [AUTHENTICATIONFAILED] mot de passe refusé\r\n`); continue; }
           sock.write(`${tag} OK LOGIN completed\r\n`);
         } else if (up === 'SELECT') {
           sock.write(`* ${store.length} EXISTS\r\n* OK [UIDNEXT ${store.length + 1}] ok\r\n${tag} OK [READ-WRITE] SELECT completed\r\n`);
@@ -60,7 +72,7 @@ function imapServer(messages, opts = {}) {
           if (!m) { sock.write(`${tag} OK FETCH completed\r\n`); continue; }
           const body = Buffer.from(m.raw, 'utf8');
           sock.write(`* ${uid} FETCH (UID ${uid} INTERNALDATE "01-Jan-2026 10:00:00 +0000" FLAGS (${m.flags.join(' ')}) BODY[]<0> {${body.length}}\r\n`);
-          sock.write(m.raw, 'binary');
+          sock.write(body.toString('binary'), 'binary');
           sock.write(`)\r\n${tag} OK FETCH completed\r\n`);
         } else if (up === 'UID' && /^STORE/i.test(arg)) {
           const uid = Number(arg.match(/STORE (\d+)/i)[1]);
@@ -75,50 +87,14 @@ function imapServer(messages, opts = {}) {
       }
     });
     sock.on('error', () => {});
-  });
+  }
+
+  const server = mode === 'tls'
+    ? tls.createServer({ key: certificat.cle, cert: certificat.cert }, s => { s.write('* OK Mock IMAP ready\r\n'); servir(s, true); })
+    : net.createServer(s => { s.write('* OK Mock IMAP ready\r\n'); servir(s, false); });
+  server.on('tlsClientError', () => {});
   server.push = raw => store.push({ uid: store.length + 1, raw, flags: [] });
+  server.commandes = commandes;
+  server.ecouter = () => new Promise(r => server.listen(0, '127.0.0.1', () => r(server.address().port)));
   return server;
 }
-
-function smtpServer(opts = {}) {
-  const received = [];
-  const server = net.createServer(sock => {
-    sock.setEncoding('utf8');
-    let state = 'cmd', data = '', current = {};
-    sock.write('220 mock.smtp ESMTP\r\n');
-    sock.on('data', chunk => {
-      if (state === 'data') {
-        data += chunk;
-        const end = data.indexOf('\r\n.\r\n');
-        if (end >= 0) {
-          current.data = data.slice(0, end);
-          received.push(current); current = {}; data = ''; state = 'cmd';
-          sock.write('250 2.0.0 OK queued\r\n');
-        }
-        return;
-      }
-      for (const line of chunk.split('\r\n').filter(Boolean)) {
-        const up = line.toUpperCase();
-        if (up.startsWith('EHLO')) sock.write('250-mock.smtp\r\n250-AUTH LOGIN PLAIN\r\n250 SIZE 10240000\r\n');
-        else if (up.startsWith('AUTH PLAIN')) sock.write('235 2.7.0 authentifié\r\n');
-        else if (up.startsWith('AUTH LOGIN')) { state = 'user'; sock.write('334 VXNlcm5hbWU6\r\n'); }
-        else if (state === 'user') { state = 'pass'; sock.write('334 UGFzc3dvcmQ6\r\n'); }
-        else if (state === 'pass') { state = 'cmd'; sock.write('235 2.7.0 authentifié\r\n'); }
-        else if (up.startsWith('MAIL FROM')) {
-          const from = line.match(/<([^>]*)>/)[1];
-          if (opts.rejectFrom && opts.rejectFrom === from) { sock.write('550 5.7.1 expéditeur non autorisé\r\n'); continue; }
-          current.from = from; current.to = [];
-          sock.write('250 2.1.0 OK\r\n');
-        } else if (up.startsWith('RCPT TO')) { current.to.push(line.match(/<([^>]*)>/)[1]); sock.write('250 2.1.5 OK\r\n'); }
-        else if (up.startsWith('DATA')) { state = 'data'; sock.write('354 envoyez\r\n'); }
-        else if (up.startsWith('QUIT')) { sock.write('221 bye\r\n'); sock.end(); }
-        else sock.write('250 OK\r\n');
-      }
-    });
-    sock.on('error', () => {});
-  });
-  server.received = received;
-  return server;
-}
-
-module.exports = { imapServer, smtpServer, makeMessage };
