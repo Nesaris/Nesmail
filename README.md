@@ -236,6 +236,20 @@ tickets, journal. La sauvegarde est chiffrée pour une clé publique RSA dont la
 clé privée ne vit pas sur la machine ; elle garde les secrets scellés sous la
 clé maîtresse, à sauvegarder à part.
 
+## Tourner la clé maîtresse
+
+Dans le Hub, réglages avancés de CACHET : la clé actuelle dans « Clé maîtresse
+remplacée », une neuve (`openssl rand -base64 32`) dans « Clé maîtresse »,
+redéployer. Au démarrage, les mots de passe des boîtes, les secrets du webhook
+et de Telegram et les secrets TOTP sont rescellés sous la neuve (journal :
+`coffre.tourne`). Vider ensuite « Clé maîtresse remplacée » et redéployer.
+Installé seul : la neuve dans `secrets/socle_cle`, l'ancienne dans la variable
+`SOCLE_CLE_ANCIENNE` du service (à ajouter dans `environment:`), le temps d'un
+démarrage.
+
+Une clé d'API se tourne depuis **Réglages → Liaison** : la nouvelle se voit une
+fois, l'ancienne cesse aussitôt.
+
 ## Ce que ça fait, ce que ça ne fait pas
 
 Fait : relève incrémentale par UID, MIME (multipart, base64, quoted-printable,
