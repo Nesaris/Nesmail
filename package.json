@@ -6,7 +6,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning server.js",
-    "test": "node --disable-warning=ExperimentalWarning test/run.js && node --test --disable-warning=ExperimentalWarning socle/test/"
+    "test": "node --disable-warning=ExperimentalWarning test/run.js && node --test --disable-warning=ExperimentalWarning socle/test/*.test.js"
   },
   "engines": { "node": ">=24.7" },
   "author": "CodexX64",
