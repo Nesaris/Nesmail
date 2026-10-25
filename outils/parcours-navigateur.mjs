@@ -104,7 +104,9 @@ const ECRANS = [
 ];
 
 for (const gamme of ['soma', 'console', 'exploitation', 'lavande']) {
-  if (gamme !== 'soma') { await app.arreter(); app = await demarrer(env(gamme), { log: muet }); }
+  // La page quitte le service avant son arrêt : sa relève périodique ne vise
+  // pas un serveur éteint (refus de connexion pris pour une erreur de l'écran).
+  if (gamme !== 'soma') { await page.goto('about:blank'); await app.arreter(); app = await demarrer(env(gamme), { log: muet }); }
   for (const theme of gamme === 'console' ? ['dark'] : ['light', 'dark']) {
     await page.goto(base());
     await page.evaluate(t => localStorage.setItem('theme', t), theme);
