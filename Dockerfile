@@ -11,7 +11,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/* \
  && groupadd -g 10001 ravyn && useradd -u 10001 -g ravyn -M -d /nonexistent -s /usr/sbin/nologin ravyn
 WORKDIR /app
-COPY package.json server.js ./
+COPY package.json nouveautes.json server.js ./
 COPY socle ./socle
 COPY lib ./lib
 COPY public ./public

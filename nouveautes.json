@@ -1,0 +1,19 @@
+[
+  {
+    "version": "2.2.0",
+    "date": "2026-10-30",
+    "points": [
+      "Assistant de configuration : la première installation se règle dans l’interface, et une mise à jour ne demande plus que ses nouveaux réglages.",
+      "Réglages de RAVYN modifiables à tout moment dans Comptes → Réglages du service, sans toucher au conteneur.",
+      "Les quatre gammes d’interface (SOMA, Console, Exploitation, Lavande) au choix dans les réglages.",
+      "Cette fenêtre : ce qu’apporte chaque mise à jour, en quelques lignes, une seule fois."
+    ]
+  },
+  {
+    "version": "2.1.0",
+    "date": "2026-10-30",
+    "points": [
+      "CACHET devient RAVYN : nouveau nom, réglages, base et clés repris tels quels."
+    ]
+  }
+]
