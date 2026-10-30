@@ -1,3 +1,7 @@
+<p align="center"><img src="medias/icone.svg" alt="" width="72" height="72"></p>
+
+<p align="center"><img src="medias/affiche.png" alt="Affiche de RAVYN" width="100%"></p>
+
 # Ravyn
 
 Boîte d'arrivée des alertes et suivi des tickets. Relève une ou plusieurs boîtes
@@ -9,6 +13,26 @@ Comptes, sessions, second facteur, clés d'accès et thèmes viennent du socle
 commun, embarqué dans `socle/` avec ses essais.
 
 ---
+
+## Aperçu
+
+| <img src="medias/capture-1.png" alt="Les alertes arrivées (SOMA)"> |
+|:--:|
+| Les alertes arrivées (SOMA) |
+
+| <img src="medias/capture-2.png" alt="Les tickets (Console)"> |
+|:--:|
+| Les tickets (Console) |
+
+| <img src="medias/capture-3.png" alt="Le courrier (Exploitation)"> |
+|:--:|
+| Le courrier (Exploitation) |
+
+| <img src="medias/capture-4.png" alt="Les boîtes (Lavande)"> |
+|:--:|
+| Les boîtes (Lavande) |
+
+Quatre gammes d’interface au choix — SOMA, Console, Exploitation, Lavande — en clair ou en sombre, de 360 à 1920 px de large.
 
 ## Le principe
 
@@ -81,6 +105,33 @@ d'authentification pour l'administrateur).
 | `RAVYN_DATA`, `PORT` | dossier des données (`/data`) et port interne (8787). |
 
 ---
+
+## Première configuration et mises à jour
+
+Au premier démarrage, ouvre l’interface : tu crées le compte administrateur avec
+le jeton d’installation (affiché dans les journaux du conteneur, ou transmis par
+le Hub), tu inscris tes facteurs de connexion, puis l’**assistant de
+configuration** passe les réglages de RAVYN groupe par groupe. Il est
+obligatoire : RAVYN reste fermé tant qu’il n’est pas terminé. Chaque valeur
+proposée convient pour commencer.
+
+<p align="center"><img src="medias/assistant.png" alt="Assistant de configuration" width="70%"></p>
+
+Réglages demandés : courriels envoyés par minute au plus ; plus ceux de
+tous les services (adresse publique, relais de confiance, gamme de
+l’interface, contact de sécurité, courriels d’alerte).
+
+Après une mise à jour qui apporte un réglage nouveau, l’assistant revient au
+passage suivant d’un administrateur et ne demande **que ce réglage-là**. Une
+mise à jour sans réglage nouveau ne demande rien : une fenêtre « Quoi de neuf »
+résume ce qu’elle apporte, une fois par compte, et se ferme d’un clic
+(`nouveautes.json`).
+
+Tout reste modifiable dans **Comptes → Réglages du service**. Une variable
+posée dans l’environnement l’emporte toujours et n’est pas demandée. RAVYN
+redémarre seul pour appliquer un changement (le processus du conteneur le
+supervise). Les valeurs vivent dans `reglages.json`, dans le volume de
+données ; les secrets y sont scellés par la clé maîtresse.
 
 ## Les boîtes
 
