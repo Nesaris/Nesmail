@@ -1,4 +1,4 @@
-# Cachet
+# Ravyn
 
 Boîte d'arrivée des alertes et suivi des tickets. Relève une ou plusieurs boîtes
 IMAP, transforme chaque alerte en ticket structuré (service, machine, urgence),
@@ -35,14 +35,14 @@ second.
 
 ## Installation par le Hub
 
-CACHET est une extension du Hub : **Extensions → CACHET → Installer**. Le Hub
+RAVYN est une extension du Hub : **Extensions → RAVYN → Installer**. Le Hub
 crée la clé maîtresse, le jeton de service et le jeton d'administration des
 comptes, les garde dans son coffre, et construit l'image depuis ce dépôt si elle
 n'est pas publiée. Le premier compte se crée depuis **Comptes des services**.
 
 L'apparence suit la page **Thème** du Hub : SOMA, Console, Exploitation ou
-Lavande, pour tous les services ou pour CACHET seul. Clair ou sombre se règle
-dans CACHET, avec le bouton de l'en-tête.
+Lavande, pour tous les services ou pour RAVYN seul. Clair ou sombre se règle
+dans RAVYN, avec le bouton de l'en-tête.
 
 ## Installation seule
 
@@ -50,10 +50,10 @@ dans CACHET, avec le bouton de l'en-tête.
 mkdir -p secrets && openssl rand -base64 32 > secrets/socle_cle && chmod 600 secrets/socle_cle
 cp .env.example .env
 docker compose up -d --build
-docker compose logs cachet | grep "Jeton d'installation"
+docker compose logs ravyn | grep "Jeton d'installation"
 ```
 
-Puis l'adresse de CACHET, servie en HTTPS par un relais (Caddy, Traefik,
+Puis l'adresse de RAVYN, servie en HTTPS par un relais (Caddy, Traefik,
 Relay…), le jeton d'installation, et le premier compte : identifiant, mot de
 passe, clé d'accès, codes de secours. Les comptes suivants s'invitent depuis
 **Comptes**.
@@ -75,10 +75,10 @@ d'authentification pour l'administrateur).
 | `SOCLE_PROXYS` | relais autorisés à transmettre l'adresse du client (CIDR). |
 | `SOCLE_URL_PUBLIQUE`, `SOCLE_SMTP_*` | alertes de sécurité des comptes par courriel. |
 | `SOCLE_THEME` | `soma`, `console`, `exploitation` ou `lavande`. |
-| `CACHET_HUB_TOKEN` | jeton de service du Hub. |
-| `CACHET_ENVOIS_MINUTE` | envois par minute, toutes clés confondues (30). |
-| `CACHET_SECRET_V1` | reprise d'une 1.0 seulement (voir plus bas). |
-| `CACHET_DATA`, `PORT` | dossier des données (`/data`) et port interne (8787). |
+| `RAVYN_HUB_TOKEN` | jeton de service du Hub. |
+| `RAVYN_ENVOIS_MINUTE` | envois par minute, toutes clés confondues (30). |
+| `RAVYN_SECRET_V1` | reprise d'une 1.0 seulement (voir plus bas). |
+| `RAVYN_DATA`, `PORT` | dossier des données (`/data`) et port interne (8787). |
 
 ---
 
@@ -141,20 +141,20 @@ récente de son identité.
 - **la clé d'envoi** (`sk_…`) n'ouvre que `POST /api/send`.
 
 Aucune clé n'existe tant qu'un administrateur ne l'a pas créée. Une clé se voit
-**une fois**, à sa création : CACHET n'en garde que l'empreinte. Perdue, elle se
+**une fois**, à sa création : RAVYN n'en garde que l'empreinte. Perdue, elle se
 régénère (l'ancienne cesse aussitôt). Aucune clé n'ouvre les boîtes, les règles,
-les réglages ni les clés : cela demande une personne connectée. Les deux s'envoient en en-tête `X-Cachet-Key`
+les réglages ni les clés : cela demande une personne connectée. Les deux s'envoient en en-tête `X-Ravyn-Key`
 ou en `Authorization: Bearer`. Le jeton de service du Hub vaut la clé complète.
 
-Les **origines autorisées** ne servent que si un front appelle CACHET depuis le
+Les **origines autorisées** ne servent que si un front appelle RAVYN depuis le
 navigateur, avec une clé (jamais avec une session) ; `*` est refusé.
 
 ### Webhook sortant
 
 ```
 POST <votre url>
-X-Cachet-Key: <clé>                    (nom de l'en-tête réglable)
-X-Cachet-Signature: sha256=<hmac du corps>
+X-Ravyn-Key: <clé>                    (nom de l'en-tête réglable)
+X-Ravyn-Signature: sha256=<hmac du corps>
 
 { "event": "ticket.created", "ticket": { … }, "at": "…" }
 ```
@@ -181,11 +181,11 @@ redirections jamais suivies.
 propre préfixe (`/api/monservice/tickets`) : la route équivalente répond, avec
 les mêmes droits.
 
-## Faire envoyer vos services vers CACHET
+## Faire envoyer vos services vers RAVYN
 
 ```
-POST https://cachet.exemple.fr/api/send
-X-Cachet-Key: sk_...
+POST https://ravyn.exemple.fr/api/send
+X-Ravyn-Key: sk_...
 
 { "from": "no-reply@exemple.fr", "to": "supervision@exemple.fr",
   "subject": "résumé court et stable du problème",
@@ -201,17 +201,41 @@ X-Cachet-Key: sk_...
 
 ---
 
+## L'ancien nom : CACHET
+
+RAVYN s'appelait CACHET. Rien n'est perdu au changement de nom :
+
+- **par le Hub** : le catalogue propose RAVYN en mise à jour du CACHET installé ;
+  le Hub copie le volume sous le nouveau nom, garde les réglages
+  (`CACHET_ENVOIS_MINUTE` devient `RAVYN_ENVOIS_MINUTE`) et suit les routes ;
+- **le volume** : `cachet.db` devient `ravyn.db` au premier démarrage, journaux
+  compris, et sa table est renommée ; les secrets déjà scellés (mots de passe
+  des boîtes, clés du webhook et de Telegram) s'ouvrent comme avant ;
+- **un ancien `.env`** : chaque `CACHET_*` vaut encore pour le `RAVYN_*` du même
+  nom, tant que celui-ci n'est pas posé ;
+- **les services qui appellent l'API** : l'en-tête `X-Cachet-Key` est encore
+  accepté, à côté de `X-Ravyn-Key` ;
+- **les récepteurs du webhook** : la signature part sous `X-Ravyn-Signature` et
+  sous `X-Cachet-Signature` ; un en-tête de clé réglé du temps de CACHET est
+  gardé tel quel ;
+- **une sauvegarde de CACHET** se restaure avec `node lib/cli.js restaurer`.
+
+Les sessions ouvertes se referment une fois (le cookie porte le nom du
+service) : on se reconnecte. Installé seul avec `docker compose`, le volume
+s'appelle maintenant `ravyn-data` : copiez l'ancien avant le premier démarrage,
+`docker run --rm -v <projet>_cachet-data:/de -v <projet>_ravyn-data:/vers busybox cp -a /de/. /vers/`.
+
 ## Reprendre une 1.0
 
 Arrêtez la 1.0, gardez son volume, et démarrez la 2.0 sur ce volume avec
-`CACHET_SECRET_V1` = l'ancien `CACHET_SECRET` (dans le Hub : réglages avancés,
-« CACHET_SECRET de la 1.0 »). Au premier démarrage, CACHET reprend les boîtes,
+`RAVYN_SECRET_V1` = l'ancien `CACHET_SECRET` (dans le Hub : réglages avancés,
+« CACHET_SECRET de la 1.0 »). Au premier démarrage, RAVYN reprend les boîtes,
 les alias, les dossiers, les règles, les réglages, le courrier et les tickets ;
 les mots de passe des boîtes sont rescellés sous la clé maîtresse, et les clés
 d'API restent valables (vos services gardent l'accès) mais ne sont plus gardées
 que par leur empreinte. `config.json` et
 `state.json` sont renommés en `*.v1-reprise-<date>` : supprimez-les une fois la
-reprise vérifiée, puis videz `CACHET_SECRET_V1`.
+reprise vérifiée, puis videz `RAVYN_SECRET_V1`.
 
 Ce qui change :
 
@@ -227,18 +251,18 @@ Ce qui change :
 ## Sauvegarde
 
 ```bash
-docker exec -i cachet node lib/cli.js sauvegarde < sauvegarde.pub > cachet.sauv
-node lib/cli.js restaurer sauvegarde.pem cachet.db < cachet.sauv   # ailleurs
+docker exec -i ravyn node lib/cli.js sauvegarde < sauvegarde.pub > ravyn.sauv
+node lib/cli.js restaurer sauvegarde.pem ravyn.db < ravyn.sauv   # ailleurs
 ```
 
-Tout est dans `cachet.db` (volume `/data`) : comptes, boîtes, règles, courrier,
+Tout est dans `ravyn.db` (volume `/data`) : comptes, boîtes, règles, courrier,
 tickets, journal. La sauvegarde est chiffrée pour une clé publique RSA dont la
 clé privée ne vit pas sur la machine ; elle garde les secrets scellés sous la
 clé maîtresse, à sauvegarder à part.
 
 ## Tourner la clé maîtresse
 
-Dans le Hub, réglages avancés de CACHET : la clé actuelle dans « Clé maîtresse
+Dans le Hub, réglages avancés de RAVYN : la clé actuelle dans « Clé maîtresse
 remplacée », une neuve (`openssl rand -base64 32`) dans « Clé maîtresse »,
 redéployer. Au démarrage, les mots de passe des boîtes, les secrets du webhook
 et de Telegram et les secrets TOTP sont rescellés sous la neuve (journal :
@@ -260,18 +284,18 @@ webhook signé ; purge à la rétention.
 
 Pas fait, volontairement : OAuth2 (mot de passe d'application), pièces jointes
 (le corps seul est extrait), plusieurs dossiers IMAP par boîte, dossiers côté
-serveur (les dossiers sont locaux à CACHET).
+serveur (les dossiers sont locaux à RAVYN).
 
 ## Le premier message ne remonte pas ?
 
-À la toute première relève, CACHET ne prend que les messages **non lus**, pour
+À la toute première relève, RAVYN ne prend que les messages **non lus**, pour
 ne pas rejouer tout l'historique. **Relever depuis zéro** (clic droit sur la
 ligne de la boîte) reprend les vingt derniers.
 
 ## Essais
 
 ```bash
-node test/run.js                       # CACHET (faux serveurs IMAP et SMTP, TLS réel)
+node test/run.js                       # RAVYN (faux serveurs IMAP et SMTP, TLS réel)
 node --test socle/test/                # le socle embarqué
 node outils/parcours-navigateur.mjs    # chaque écran, chaque gamme, chaque largeur (Playwright)
 ```
