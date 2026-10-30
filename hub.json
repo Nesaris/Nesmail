@@ -9,6 +9,15 @@
   "repository": "https://github.com/CodexX64/ravyn",
   "license": "MIT",
   "minHubVersion": "0.14.0",
+  "replaces": [
+    {
+      "id": "cachet",
+      "config": {
+        "CACHET_ENVOIS_MINUTE": "RAVYN_ENVOIS_MINUTE",
+        "CACHET_SECRET_V1": "RAVYN_SECRET_V1"
+      }
+    }
+  ],
   "install": {
     "type": "compose",
     "compose": "deploy/compose.hub.yml",
