@@ -1,4 +1,4 @@
-# Security compliance — CACHET
+# Security compliance — RAVYN (ex-CACHET)
 
 Standard: Project Baseline Requirements & Security Manual, Edition 2.0 (258 controls)
 Audited: 2026-10-23   ·   Owner: Codex64   ·   Status: NON-COMPLIANT
@@ -549,3 +549,18 @@ Sondage exploratoire du 2026-10-23 sur une instance neuve (vrais comptes adminis
 | P39 | quarante clés inventées | 40 × `GET /api/state` avec une clé inventée, codes comptés | 10×401 30×429 | 10×401 30×429 |
 | P40 | numéro de ticket qui se suit | identifiants rendus : `TCK-0001`… ou un identifiant de message `<boîte>:<uid>` | false | false |
 | P41 | envoi rejoué sous la même clé | `POST /api/send` deux fois, même `Idempotency-Key`, puis clé de 5 signes | 1 parti / rejoué / 400 | 1 parti / rejoué / 400 |
+
+
+## Suivi du 2026-10-30 (2.1.0) : CACHET devient RAVYN
+
+Le changement de nom ne change aucun contrôle de statut. Ce qui est repris de l'ancien nom, et pourquoi c'est sans risque :
+
+- étiquettes de sous-clés du coffre gardées (`cachet:boite`, `cachet:webhook`, `cachet:telegram`, `lib/base.js:57`) : les secrets scellés par CACHET s'ouvrent, aucun n'est rescellé ni écrit en clair ;
+- base `cachet.db` renommée en `ravyn.db` une seule fois, journaux WAL compris, avant l'ouverture et les droits 0600 (`lib/base.js:36`) ; table `cachet_documents` renommée (`lib/base.js:49`) ;
+- variables `CACHET_*` lues seulement quand le `RAVYN_*` du même nom est absent (`lib/config.js:9`) ; elles passent par la même validation ;
+- en-tête `X-Cachet-Key` accepté à côté de `X-Ravyn-Key` (`lib/api.js:121`) : même vérification, même limiteur ;
+- signature HMAC du webhook envoyée sous les deux noms, même valeur (`lib/webhook.js:55`) ; aucun secret de plus ne sort ;
+- sauvegarde marquée `cachet` restaurable (`lib/cli.js:27`) : même déchiffrement et même contrôle d'intégrité ;
+- identifiant du service dans le socle : `ravyn` ; les cookies changent de nom, les sessions ouvertes se referment une fois.
+
+Essais : 87 du service, dont la reprise d'un volume de CACHET (base et table renommées, ancien `.env`, ancien en-tête, secret de boîte lisible) et la double signature, et 77 du socle. Banc à part : volume créé par le vrai CACHET 2.0.2 (boîte, secret de webhook), ouvert par RAVYN avec l'ancien `.env` : base et table renommées, mot de passe de la boîte et secret du webhook relus, `X-Cachet-Key` et `X-Ravyn-Key` acceptés. Manifeste validé contre le schéma du Hub (`replaces` : cachet). Parcours du navigateur : 504 contrôles, 0 défaut, 0 erreur de console.
