@@ -9,6 +9,7 @@ import os from 'node:os';
 import path from 'node:path';
 import tls from 'node:tls';
 import { chevauchements, LARGEURS } from '../socle/essai/mise-en-page.mjs';
+import { passerAssistant, ouvrirReglagesService } from '../socle/essai/assistant-navigateur.mjs';
 import { certificatEssai } from '../socle/essai/smtp.js';
 import { imapServer, makeMessage } from '../test/mocks.js';
 import { demarrer } from '../lib/serveur.js';
@@ -74,6 +75,7 @@ await page.getByRole('button', { name: 'Créer le compte' }).click();
 await page.getByRole('button', { name: /Créer la clé maintenant/ }).click();
 await page.getByText('J’ai rangé ces codes en lieu sûr.').click();
 await page.getByRole('button', { name: 'Terminer' }).click();
+await passerAssistant(page, { controle });
 await page.locator('#app:not(.hidden)').waitFor();
 await page.getByRole('heading', { name: 'Arrivée des tickets' }).waitFor();
 
