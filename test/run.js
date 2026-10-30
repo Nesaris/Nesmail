@@ -1,4 +1,4 @@
-// Essais de CACHET : décodage, moteur de tickets et de règles, connexions
+// Essais de RAVYN : décodage, moteur de tickets et de règles, connexions
 // IMAP et SMTP chiffrées, puis l'API de bout en bout sur le socle (comptes,
 // rôles, clés, CSRF). Aucune dépendance : node test/run.js.
 import assert from 'node:assert';
@@ -260,11 +260,11 @@ console.log('\n── SMTP chiffré ──');
 const relais = await relaisEssai({ mode: 'starttls', certificat: cert, utilisateur: 'alertes@exemple.fr', motDePasse: 'MotDePasseTest#2026' });
 const envoyer = o => smtp.send({ host: 'localhost', port: relais.port, user: 'alertes@exemple.fr', pass: 'MotDePasseTest#2026', ...o });
 await t('envoi STARTTLS : en-têtes et corps corrects', async () => {
-  await envoyer({ from: 'rmm@exemple.fr', fromName: 'Cachet', to: 'admin@exemple.fr', subject: 'Ticket pris en charge', text: 'On regarde ça.' });
+  await envoyer({ from: 'rmm@exemple.fr', fromName: 'Ravyn', to: 'admin@exemple.fr', subject: 'Ticket pris en charge', text: 'On regarde ça.' });
   const got = (await relais.attendre(1)).at(-1);
   assert.equal(got.de, 'rmm@exemple.fr');
   assert.equal(got.a, 'admin@exemple.fr');
-  assert.ok(got.entetes.includes('From: Cachet <rmm@exemple.fr>'));
+  assert.ok(got.entetes.includes('From: Ravyn <rmm@exemple.fr>'));
   assert.equal(got.texte, 'On regarde ça.');
   assert.ok(!/EHLO [^\r\n]*\b(localhost|[0-9a-f]{12})\b/.test(got.entetes));
 });
@@ -315,15 +315,15 @@ await t('TLS implicite (465) : auto-signé refusé, accepté une fois épinglé'
 
 console.log('\n── API bout en bout ──');
 const { demarrer } = await import('../lib/serveur.js');
-const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'cachet-essai-'));
+const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'ravyn-essai-'));
 const JETON_INSTALL = 'jeton-installation-des-essais-0123456789';
 const JETON_HUB = 'jeton-du-hub-pour-les-essais-0123456789abc';
 const muet = { info() {}, warn() {}, error: (...a) => console.error(...a) };
-let app = await demarrer({ CACHET_DATA: dossier, PORT: '0', HOTE: '127.0.0.1', SOCLE_HTTP: '1', SOCLE_JETON_INSTALLATION: JETON_INSTALL, CACHET_HUB_TOKEN: JETON_HUB, SOCLE_ARGON2_M: '19456', SOCLE_ARGON2_T: '2', SOCLE_ARGON2_P: '1' }, { log: muet });
+let app = await demarrer({ RAVYN_DATA: dossier, PORT: '0', HOTE: '127.0.0.1', SOCLE_HTTP: '1', SOCLE_JETON_INSTALLATION: JETON_INSTALL, RAVYN_HUB_TOKEN: JETON_HUB, SOCLE_ARGON2_M: '19456', SOCLE_ARGON2_T: '2', SOCLE_ARGON2_P: '1' }, { log: muet });
 const port = () => app.serveur.address().port;
 const base = () => `http://127.0.0.1:${port()}`;
 const admin = new Client(port());
-const cle = (k, chemin, o = {}) => fetch(base() + chemin, { ...o, headers: { 'x-cachet-key': k, ...(o.body ? { 'content-type': 'application/json' } : {}), ...(o.headers || {}) } });
+const cle = (k, chemin, o = {}) => fetch(base() + chemin, { ...o, headers: { 'x-ravyn-key': k, ...(o.body ? { 'content-type': 'application/json' } : {}), ...(o.headers || {}) } });
 
 await t('l\'API refuse sans session ; /api/health répond à tous', async () => {
   assert.equal((await new Client(port()).get('/api/state')).status, 401);
@@ -389,7 +389,7 @@ await t('où part le mot de passe d\'une boîte : renfort exigé, métadonnées 
 });
 await t('le mot de passe est scellé dans la base, jamais en clair', async () => {
   app.depot.flush();
-  const brut = fs.readFileSync(path.join(dossier, 'cachet.db')).toString('latin1') + (fs.existsSync(path.join(dossier, 'cachet.db-wal')) ? fs.readFileSync(path.join(dossier, 'cachet.db-wal')).toString('latin1') : '');
+  const brut = fs.readFileSync(path.join(dossier, 'ravyn.db')).toString('latin1') + (fs.existsSync(path.join(dossier, 'ravyn.db-wal')) ? fs.readFileSync(path.join(dossier, 'ravyn.db-wal')).toString('latin1') : '');
   assert.ok(!brut.includes('MotDePasseTest#2026'), 'mot de passe en clair');
   assert.match(app.depot.config.accounts[0].imapPass, /^v1\./);
 });
@@ -571,7 +571,7 @@ await t('une clé d\'API se voit une fois, à sa création (renfort) ; seule son
   assert.deepEqual(relue.json.cles, { complete: true, envoi: true });
   assert.ok(!JSON.stringify(relue.json).includes(cleComplete) && !JSON.stringify((await admin.get('/api/state')).json).includes(cleComplete), 'la clé ressort de l\'API');
   app.depot.flush();
-  const base = ['cachet.db', 'cachet.db-wal'].map(f => path.join(dossier, f)).filter(f => fs.existsSync(f)).map(f => fs.readFileSync(f).toString('latin1')).join('');
+  const base = ['ravyn.db', 'ravyn.db-wal'].map(f => path.join(dossier, f)).filter(f => fs.existsSync(f)).map(f => fs.readFileSync(f).toString('latin1')).join('');
   assert.ok(!base.includes(cleComplete) && !base.includes(cleEnvoi), 'une clé d\'API en clair dans la base');
   assert.match(app.depot.config.settings.api.key, /^sha256:[0-9a-f]{64}$/);
 });
@@ -621,7 +621,8 @@ await t('CORS : refusé tant que l\'origine n\'est pas déclarée, jamais « * �
   assert.equal(pre.status, 204);
   assert.equal(pre.headers.get('access-control-allow-origin'), 'http://front.exemple:9000');
   assert.equal(pre.headers.get('access-control-allow-credentials'), null);
-  assert.ok(/x-cachet-key/.test(pre.headers.get('access-control-allow-headers')));
+  assert.ok(/x-ravyn-key/.test(pre.headers.get('access-control-allow-headers')));
+  assert.ok(/x-cachet-key/.test(pre.headers.get('access-control-allow-headers')), 'ancien en-tête de clé');
 });
 await t('le webhook part signé, avec l\'en-tête demandé', async () => {
   const recus = [];
@@ -634,13 +635,14 @@ await t('le webhook part signé, avec l\'en-tête demandé', async () => {
   assert.equal((await admin.patch('/api/settings', { webhook: { url: 'file:///etc/passwd' } })).status, 400);
   const r = await admin.patch('/api/settings', { webhook: { enabled: true, url: `http://127.0.0.1:${srv.address().port}/hook`, key: 'cle-tierce', keyHeader: 'x-service-key', secret: 'hmac-partage' } });
   assert.equal(r.status, 200, JSON.stringify(r.json));
-  await admin.post('/api/tickets', { subject: 'Essai webhook', service: 'Cachet', urgency: 'haute' });
+  await admin.post('/api/tickets', { subject: 'Essai webhook', service: 'Ravyn', urgency: 'haute' });
   await new Promise(fin => setTimeout(fin, 300));
   assert.equal(recus.length, 1, 'aucun appel reçu');
   assert.equal(recus[0].corps.event, 'ticket.created');
   assert.equal(recus[0].entetes['x-service-key'], 'cle-tierce');
-  assert.equal(recus[0].entetes['x-cachet-key'], undefined, 'l\'en-tête par défaut traîne encore');
-  assert.equal(recus[0].entetes['x-cachet-signature'], signature(JSON.stringify(recus[0].corps), 'hmac-partage'));
+  assert.equal(recus[0].entetes['x-ravyn-key'], undefined, 'l\'en-tête par défaut traîne encore');
+  assert.equal(recus[0].entetes['x-ravyn-signature'], signature(JSON.stringify(recus[0].corps), 'hmac-partage'));
+  assert.equal(recus[0].entetes['x-cachet-signature'], recus[0].entetes['x-ravyn-signature'], 'signature sous l\'ancien nom aussi (récepteurs réglés du temps de CACHET)');
   srv.close();
   await admin.patch('/api/settings', { webhook: { enabled: false } });
 });
@@ -698,7 +700,7 @@ await t('un préfixe client retombe sur la route équivalente, avec les mêmes d
 await t('/api et /api/ping répondent en JSON', async () => {
   const i = await admin.get('/api');
   assert.ok(Array.isArray(i.json.routes) && i.json.routes.length > 10);
-  assert.equal((await admin.get('/api/ping')).json.service, 'cachet');
+  assert.equal((await admin.get('/api/ping')).json.service, 'ravyn');
 });
 await t('la page porte la version et la gamme, la CSP interdit le script en ligne', async () => {
   const r = await fetch(base() + '/');
@@ -742,7 +744,7 @@ await t('clés fausses : chaque échec compte pour l\'adresse, bloquée après d
 await t('les données survivent à un redémarrage', async () => {
   const tickets1 = (await admin.get('/api/state')).json.tickets.length;
   await app.arreter();
-  app = await demarrer({ CACHET_DATA: dossier, PORT: '0', HOTE: '127.0.0.1', SOCLE_HTTP: '1', CACHET_HUB_TOKEN: JETON_HUB, SOCLE_ARGON2_M: '19456', SOCLE_ARGON2_T: '2', SOCLE_ARGON2_P: '1' }, { log: muet });
+  app = await demarrer({ RAVYN_DATA: dossier, PORT: '0', HOTE: '127.0.0.1', SOCLE_HTTP: '1', RAVYN_HUB_TOKEN: JETON_HUB, SOCLE_ARGON2_M: '19456', SOCLE_ARGON2_T: '2', SOCLE_ARGON2_P: '1' }, { log: muet });
   const s = await (await cle(JETON_HUB, '/api/state')).json();
   assert.equal(s.tickets.length, tickets1);
   assert.equal(Object.keys(s.accounts).length, 1);
@@ -752,9 +754,35 @@ await t('le journal de sécurité garde les gestes sensibles', async () => {
   for (const a of ['boite.ajoutee', 'regle.creee', 'cle.tournee', 'reglages.modifies', 'courriel.envoye', 'connexion.cle']) assert.ok(actions.includes(a), `${a} absent`);
 });
 
+console.log('\n── ancien nom : CACHET ──');
+await t('volume de CACHET : base et table renommées, ancien .env, ancien en-tête de clé, secrets toujours lisibles', async () => {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'ravyn-cachet-'));
+  const env = { PORT: '0', HOTE: '127.0.0.1', SOCLE_HTTP: '1', SOCLE_ARGON2_M: '19456', SOCLE_ARGON2_T: '2', SOCLE_ARGON2_P: '1' };
+  const a = await demarrer({ ...env, RAVYN_DATA: d }, { log: muet });
+  a.depot.config.accounts.push({ id: 'a1', name: 'Alertes', addr: 'alertes@exemple.test', kind: 'tickets', imapHost: 'localhost', imapPort: 993, imapTls: true, imapPass: a.depot.sceller('boite', 'mdp-boite', 'a1'), aliases: [] });
+  a.depot.saveConfig();
+  await a.arreter();
+  // Le volume tel que CACHET le laissait : cachet.db, table cachet_documents.
+  const { DatabaseSync } = await import('node:sqlite');
+  const brut = new DatabaseSync(path.join(d, 'ravyn.db'));
+  brut.exec('PRAGMA wal_checkpoint(TRUNCATE); ALTER TABLE ravyn_documents RENAME TO cachet_documents');
+  brut.close();
+  for (const s of ['', '-wal', '-shm']) if (fs.existsSync(path.join(d, 'ravyn.db' + s))) fs.renameSync(path.join(d, 'ravyn.db' + s), path.join(d, 'cachet.db' + s));
+  const jeton = 'h'.repeat(40);
+  const r = await demarrer({ ...env, CACHET_DATA: d, CACHET_HUB_TOKEN: jeton }, { log: muet });
+  try {
+    assert.ok(fs.existsSync(path.join(d, 'ravyn.db')) && !fs.existsSync(path.join(d, 'cachet.db')), 'base non renommée');
+    assert.deepEqual(r.db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE '%_documents'").all().map(x => x.name), ['ravyn_documents']);
+    assert.equal(r.depot.motDePasse(r.depot.config.accounts[0]), 'mdp-boite');
+    const url = `http://127.0.0.1:${r.serveur.address().port}/api/state`;
+    assert.equal((await fetch(url, { headers: { 'x-cachet-key': jeton } })).status, 200, 'ancien en-tête ou ancien CACHET_HUB_TOKEN refusé');
+    assert.equal((await fetch(url, { headers: { 'x-ravyn-key': jeton } })).status, 200);
+  } finally { await r.arreter(); }
+});
+
 console.log('\n── reprise d\'une 1.0 ──');
 await t('config.json et state.json repris, secrets rescellés, auto-signé épinglé à la première connexion', async () => {
-  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'cachet-v1-'));
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'ravyn-v1-'));
   const secretV1 = crypto.randomBytes(32).toString('hex');
   const cleV1 = crypto.createHash('sha256').update(secretV1).digest();
   const enc = v => { const iv = crypto.randomBytes(12); const c = crypto.createCipheriv('aes-256-gcm', cleV1, iv); const o = Buffer.concat([c.update(v, 'utf8'), c.final()]); return 'enc:' + Buffer.concat([iv, c.getAuthTag(), o]).toString('base64'); };
@@ -764,7 +792,7 @@ await t('config.json et state.json repris, secrets rescellés, auto-signé épin
     folders: [], rules: [], settings: { api: { key: enc('pk_ancienne'), sendKey: enc('sk_ancienne'), origins: [] }, webhook: { enabled: false, url: '', key: '', secret: '' }, telegram: { enabled: false, token: '', chatId: '' } },
   }));
   fs.writeFileSync(path.join(d, 'state.json'), JSON.stringify({ messages: [], tickets: [{ id: 'TCK-0007', subject: 'repris', status: 'nouveau', urgency: 'haute', service: 'x', history: [], updatedAt: new Date().toISOString() }], log: [], seq: 8, uidState: {}, rescan: {} }));
-  const v1 = await demarrer({ CACHET_DATA: d, PORT: '0', HOTE: '127.0.0.1', SOCLE_HTTP: '1', CACHET_SECRET_V1: secretV1, SOCLE_ARGON2_M: '19456', SOCLE_ARGON2_T: '2', SOCLE_ARGON2_P: '1' }, { log: muet });
+  const v1 = await demarrer({ RAVYN_DATA: d, PORT: '0', HOTE: '127.0.0.1', SOCLE_HTTP: '1', RAVYN_SECRET_V1: secretV1, SOCLE_ARGON2_M: '19456', SOCLE_ARGON2_T: '2', SOCLE_ARGON2_P: '1' }, { log: muet });
   try {
     const acc = v1.depot.config.accounts[0];
     assert.equal(v1.depot.motDePasse(acc), 'ancien-mdp');
@@ -782,8 +810,8 @@ await t('config.json et state.json repris, secrets rescellés, auto-signé épin
 });
 
 await t('une rafale reçoit 429, avec les en-têtes de sécurité', async () => {
-  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'cachet-rafale-'));
-  const r = await demarrer({ CACHET_DATA: d, PORT: '0', HOTE: '127.0.0.1', SOCLE_HTTP: '1', SOCLE_ARGON2_M: '19456', SOCLE_ARGON2_T: '2', SOCLE_ARGON2_P: '1' }, { log: muet });
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'ravyn-rafale-'));
+  const r = await demarrer({ RAVYN_DATA: d, PORT: '0', HOTE: '127.0.0.1', SOCLE_HTTP: '1', SOCLE_ARGON2_M: '19456', SOCLE_ARGON2_T: '2', SOCLE_ARGON2_P: '1' }, { log: muet });
   try {
     const url = `http://127.0.0.1:${r.serveur.address().port}/api/health`;
     let refus = null;

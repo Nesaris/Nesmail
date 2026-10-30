@@ -1,9 +1,9 @@
-# CACHET installé par le Hub.
+# RAVYN installé par le Hub.
 # Les {{...}} sont remplacés à l'installation : secrets générés, port d'hôte,
 # volume nommé et réseau partagé du Hub.
 services:
-  cachet:
-    image: ghcr.io/codexx64/cachet:{{config.IMAGE_TAG}}
+  ravyn:
+    image: ghcr.io/codexx64/ravyn:{{config.IMAGE_TAG}}
     container_name: {{service.host}}
     restart: unless-stopped
     networks: [hub]
@@ -26,13 +26,13 @@ services:
         max-file: "5"
     environment:
       PORT: "8787"
-      CACHET_DATA: /data
+      RAVYN_DATA: /data
       # Jeton de service du Hub : courrier, tickets et envoi, jamais les boîtes,
       # les règles, les réglages ni les comptes.
-      CACHET_HUB_TOKEN: "{{config.HUB_TOKEN}}"
-      CACHET_ENVOIS_MINUTE: "{{config.CACHET_ENVOIS_MINUTE}}"
+      RAVYN_HUB_TOKEN: "{{config.HUB_TOKEN}}"
+      RAVYN_ENVOIS_MINUTE: "{{config.RAVYN_ENVOIS_MINUTE}}"
       # Reprise d'une 1.0 seulement : son ancien CACHET_SECRET.
-      CACHET_SECRET_V1: "{{config.CACHET_SECRET_V1}}"
+      RAVYN_SECRET_V1: "{{config.RAVYN_SECRET_V1}}"
       # Comptes : clé maîtresse gardée par le Hub, accès HTTPS ou mode dégradé,
       # relais de confiance.
       SOCLE_CLE: "{{config.SOCLE_CLE}}"

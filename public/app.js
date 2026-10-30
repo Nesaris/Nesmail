@@ -1,4 +1,4 @@
-// Interface de CACHET. La porte du socle gère la connexion (mot de passe,
+// Interface de RAVYN. La porte du socle gère la connexion (mot de passe,
 // clés d'accès, second facteur) ; tout ce qui suit suppose une session
 // complète, et le serveur revérifie chaque droit. Le corps HTML d'un message
 // n'est jamais injecté comme balisage : il est relu par le navigateur dans un
@@ -135,8 +135,8 @@ function aller(page, bouton) {
   if (bouton) bouton.classList.add('on');
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('on', p.id === 'p-' + page));
   // Les pages des comptes viennent du socle : construites à l'ouverture, à jour.
-  if (page === 'comptes') $('p-comptes').replaceChildren(pageComptes(socle, { service: 'CACHET' }));
-  if (page === 'securite') $('p-securite').replaceChildren(pageSecurite(socle, { service: 'CACHET', confidentialite: '/confidentialite.txt' }));
+  if (page === 'comptes') $('p-comptes').replaceChildren(pageComptes(socle, { service: 'RAVYN' }));
+  if (page === 'securite') $('p-securite').replaceChildren(pageSecurite(socle, { service: 'RAVYN', confidentialite: '/confidentialite.txt' }));
   window.scrollTo(0, 0);
 }
 document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => {
@@ -288,7 +288,7 @@ function renderMailPage() {
 
   const nom = envoyes ? 'Envoyés' : (view.folder === 'all' ? null : folderName(view.folder));
   $('mailTitle').textContent = nom || 'Courrier';
-  $('mailLede').textContent = envoyes ? 'Les messages envoyés depuis Cachet, gardés aussi longtemps que le reste du courrier.'
+  $('mailLede').textContent = envoyes ? 'Les messages envoyés depuis Ravyn, gardés aussi longtemps que le reste du courrier.'
     : view.folder !== 'all' ? 'Les messages rangés dans ce dossier, à la main ou par une règle.'
     : 'Les boîtes réglées en usage « courrier ». Rien n’y devient un ticket automatiquement.';
   $('mailListTitle').textContent = nom || (view.mailAcct === 'all' ? 'Toutes les boîtes'
@@ -1011,7 +1011,7 @@ function renderPrefs() {
   const w = s.webhook || {};
   $('hookOn').classList.toggle('on', Boolean(w.enabled));
   $('hookUrl').value = w.url || '';
-  $('hookHeader').value = w.keyHeader || 'x-cachet-key';
+  $('hookHeader').value = w.keyHeader || 'x-ravyn-key';
   const l = w.last || {};
   $('hookNote').textContent = !l.at ? 'jamais appelé'
     : l.ok ? `dernier appel accepté · ${ago(l.at)}`
@@ -1038,7 +1038,7 @@ $('saveApi').onclick = async () => {
   await api('PATCH', '/api/settings', { api: { origins: origines } });
   toast('Origines enregistrées'); await refresh();
 };
-// Une clé neuve ne se montre qu'ici, une fois : CACHET n'en garde que l'empreinte.
+// Une clé neuve ne se montre qu'ici, une fois : RAVYN n'en garde que l'empreinte.
 async function creerCle(envoi) {
   const posee = S.settings?.api?.cles?.[envoi ? 'envoi' : 'complete'];
   if (posee && !await confirmer(envoi ? 'Régénérer la clé d’envoi ?' : 'Régénérer la clé complète ?',
@@ -1049,7 +1049,7 @@ async function creerCle(envoi) {
     const champ = h('input', { class: 'field mono', type: 'text', readonly: true, value: valeur, 'aria-label': 'Clé' });
     await dialogue({
       titre: envoi ? 'Clé d’envoi' : 'Clé complète',
-      texte: 'Copie-la maintenant : elle ne sera plus affichée. CACHET n’en garde que l’empreinte.',
+      texte: 'Copie-la maintenant : elle ne sera plus affichée. RAVYN n’en garde que l’empreinte.',
       contenu: [champ],
       boutons: [{ texte: 'Copier', classe: 'solid', agir: () => { copier(valeur, 'Clé copiée'); return false; } }, { texte: 'J’ai copié la clé', classe: '', valeur: true }],
     });
@@ -1063,7 +1063,7 @@ $('saveHook').onclick = async () => {
     webhook: {
       enabled: $('hookOn').classList.contains('on'),
       url: $('hookUrl').value.trim(),
-      keyHeader: $('hookHeader').value.trim() || 'x-cachet-key',
+      keyHeader: $('hookHeader').value.trim() || 'x-ravyn-key',
       key: $('hookKey').value || undefined,
       secret: $('hookSecret').value || undefined
     }
@@ -1127,7 +1127,7 @@ if ($('apiBase')) $('apiBase').value = location.origin + '/api';
 
 appliquerTheme();
 const marque = h('img', { src: '/mark.png', alt: '', width: '18', height: '18', class: 'marque-porte' });
-const etat = await porte({ api: socle, service: 'CACHET', marque, sousTitre: 'arrivée des alertes et suivi des tickets' });
+const etat = await porte({ api: socle, service: 'RAVYN', marque, sousTitre: 'arrivée des alertes et suivi des tickets' });
 const role = etat.session.compte.role;
 // Ce que le rôle ne permet pas n'est pas proposé ; le serveur le refuserait.
 document.body.dataset.role = role;

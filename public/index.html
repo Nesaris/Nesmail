@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<title>Cachet</title>
+<title>Ravyn</title>
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png">
 <link rel="apple-touch-icon" href="/favicon.png">
@@ -19,7 +19,7 @@
   <aside class="side">
     <div class="mark">
       <img class="glyph" src="/mark.png" alt="" width="28" height="28">
-      <b>Cachet</b><span class="pulse"></span>
+      <b>Ravyn</b><span class="pulse"></span>
     </div>
 
     <div class="set">
@@ -115,7 +115,7 @@
     <!-- boîtes -->
     <section class="page" id="p-acct">
       <div class="headrow">
-        <div><h1 class="title">Boîtes</h1><p class="lede">Une boîte, ses alias, et ce que Cachet fait de ce qui arrive. Clic droit sur une ligne pour les actions.</p></div>
+        <div><h1 class="title">Boîtes</h1><p class="lede">Une boîte, ses alias, et ce que Ravyn fait de ce qui arrive. Clic droit sur une ligne pour les actions.</p></div>
         <div class="actions"><button class="btn solid" id="addAccount" data-admin><svg class="i sm" viewBox="0 0 24 24"><path d="M12 5.5v13M5.5 12h13"/></svg>Ajouter une boîte</button></div>
       </div>
       <div class="card">
@@ -126,7 +126,7 @@
 
     <!-- journal -->
     <section class="page" id="p-log">
-      <div class="headrow"><div><h1 class="title">Journal</h1><p class="lede">Ce que Cachet a fait, sans le contenu des messages.</p></div></div>
+      <div class="headrow"><div><h1 class="title">Journal</h1><p class="lede">Ce que Ravyn a fait, sans le contenu des messages.</p></div></div>
       <div class="card"><header><h2>Dernières décisions</h2><span class="note" id="logNote"></span></header>
         <div class="tw"><table><thead><tr><th class="col-cache2">Expéditeur</th><th class="col-cache">Boîte visée</th><th>Décision</th><th class="cell-right">Quand</th></tr></thead><tbody id="logBody"></tbody></table></div>
       </div>
@@ -172,16 +172,16 @@
         <div class="body">
           <div class="champ mono"><label>Adresse de l'API</label><input id="apiBase" readonly></div>
           <div class="duo">
-            <div class="champ mono"><label>Clé complète · en-tête X-Cachet-Key</label><input id="apiKey" readonly>
+            <div class="champ mono"><label>Clé complète · en-tête X-Ravyn-Key</label><input id="apiKey" readonly>
               <button class="btn sm cle-creer" type="button" id="apiRotate" data-admin>Créer la clé complète</button></div>
             <div class="champ mono"><label>Clé d'envoi · POST /api/send seulement</label><input id="apiSendKey" readonly>
               <button class="btn sm cle-creer" type="button" id="apiRotateSend" data-admin>Créer la clé d'envoi</button></div>
           </div>
-          <p class="aide remonte">CACHET ne garde que l'empreinte d'une clé : elle se voit une fois, à sa création. Une clé perdue se régénère.</p>
+          <p class="aide remonte">RAVYN ne garde que l'empreinte d'une clé : elle se voit une fois, à sa création. Une clé perdue se régénère.</p>
           <div class="champ mono"><label>Origines autorisées · une par ligne</label>
             <textarea id="apiOrigins" rows="2" placeholder="https://exemple.interne:9000"></textarea></div>
           <p class="aide remonte">
-            Nécessaire uniquement si un front appelle Cachet depuis le navigateur. Un service qui appelle depuis son serveur n'en a pas besoin.</p>
+            Nécessaire uniquement si un front appelle Ravyn depuis le navigateur. Un service qui appelle depuis son serveur n'en a pas besoin.</p>
           <button class="btn solid" id="saveApi" data-admin>Enregistrer</button>
         </div>
       </div>
@@ -193,17 +193,17 @@
           <div class="champ mono"><label>URL appelée</label><input id="hookUrl" placeholder="https://exemple.interne/api/hook"></div>
           <div class="duo">
             <div class="champ mono"><label>Clé envoyée</label><input id="hookKey" type="password" placeholder="inchangée"></div>
-            <div class="champ mono"><label>En-tête de la clé</label><input id="hookHeader" placeholder="x-cachet-key"></div>
+            <div class="champ mono"><label>En-tête de la clé</label><input id="hookHeader" placeholder="x-ravyn-key"></div>
           </div>
           <div class="champ mono"><label>Secret de signature</label><input id="hookSecret" type="password" placeholder="inchangé"></div>
           <p class="aide remonte">
-            Le corps est signé en HMAC SHA-256 dans <code>X-Cachet-Signature</code>, sous la forme <code>sha256=…</code>.</p>
+            Le corps est signé en HMAC SHA-256 dans <code>X-Ravyn-Signature</code> (et <code>X-Cachet-Signature</code>, l’ancien nom), sous la forme <code>sha256=…</code>.</p>
           <div class="rangee"><button class="btn solid" id="saveHook" data-admin>Enregistrer</button><button class="btn" id="testHook" data-admin>Envoyer un essai</button></div>
         </div>
       </div>
 
       <div class="espace card">
-        <header><h2>Routes de l'API</h2><span class="note">session, X-Cachet-Key ou jeton du Hub</span></header>
+        <header><h2>Routes de l'API</h2><span class="note">session, X-Ravyn-Key ou jeton du Hub</span></header>
         <table>
           <thead><tr><th>Méthode</th><th>Route</th><th class="col-cache2">Effet</th></tr></thead>
           <tbody>

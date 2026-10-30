@@ -1,12 +1,12 @@
 {
   "$schema": "https://raw.githubusercontent.com/CodexX64/hub-registry/main/schema/hub-extension.v1.json",
   "manifestVersion": 1,
-  "id": "cachet",
-  "name": "CACHET",
+  "id": "ravyn",
+  "name": "RAVYN",
   "version": "2.0.2",
   "description": "Boîte d'arrivée des alertes : relève les boîtes IMAP, fait de chaque alerte un ticket par service et urgence, répond depuis la bonne adresse.",
   "icon": "mail",
-  "repository": "https://github.com/CodexX64/cachet",
+  "repository": "https://github.com/CodexX64/ravyn",
   "license": "MIT",
   "minHubVersion": "0.14.0",
   "install": {
@@ -14,10 +14,10 @@
     "compose": "deploy/compose.hub.yml",
     "remote": {
       "supported": true,
-      "label": "Adresse de CACHET",
+      "label": "Adresse de RAVYN",
       "placeholder": "http://192.0.2.30:8787",
       "defaultPort": 8787,
-      "setupHelp": "Pour un CACHET déjà en service ailleurs : poser CACHET_HUB_TOKEN dans son environnement, redémarrer, puis coller ce jeton ici."
+      "setupHelp": "Pour un RAVYN déjà en service ailleurs : poser RAVYN_HUB_TOKEN dans son environnement, redémarrer, puis coller ce jeton ici."
     },
     "healthcheck": {
       "type": "http",
@@ -70,7 +70,7 @@
       "type": "secret",
       "generate": "random:48",
       "advanced": true,
-      "help": "Généré par le Hub, distinct du jeton de service : il ne sert qu'à gérer les comptes de CACHET depuis Comptes des services, après confirmation de ton identité dans le Hub. Vide : aucune gestion depuis le Hub."
+      "help": "Généré par le Hub, distinct du jeton de service : il ne sert qu'à gérer les comptes de RAVYN depuis Comptes des services, après confirmation de ton identité dans le Hub. Vide : aucune gestion depuis le Hub."
     },
     {
       "key": "SOCLE_HTTP",
@@ -88,14 +88,14 @@
           "label": "Oui — réseau de confiance, mode dégradé"
         }
       ],
-      "help": "Les clés d'accès n'existent qu'en HTTPS. En mode dégradé, l'administrateur se connecte avec mot de passe et application d'authentification, et CACHET l'affiche partout."
+      "help": "Les clés d'accès n'existent qu'en HTTPS. En mode dégradé, l'administrateur se connecte avec mot de passe et application d'authentification, et RAVYN l'affiche partout."
     },
     {
       "key": "SOCLE_CLE",
       "label": "Clé maîtresse",
       "type": "secret",
       "generate": "random:32",
-      "help": "Scelle les mots de passe des boîtes, les clés d'API, les secrets du webhook et de Telegram, et les secrets TOTP. Créée par le Hub, gardée dans son coffre, jamais sur le volume de CACHET."
+      "help": "Scelle les mots de passe des boîtes, les clés d'API, les secrets du webhook et de Telegram, et les secrets TOTP. Créée par le Hub, gardée dans son coffre, jamais sur le volume de RAVYN."
     },
     {
       "key": "SOCLE_CLE_ANCIENNE",
@@ -109,7 +109,7 @@
       "label": "Jeton d'installation",
       "type": "secret",
       "advanced": true,
-      "help": "Vide : CACHET en tire un au premier démarrage et l'écrit dans ses journaux. Il ne sert qu'à créer le premier compte."
+      "help": "Vide : RAVYN en tire un au premier démarrage et l'écrit dans ses journaux. Il ne sert qu'à créer le premier compte."
     },
     {
       "key": "SOCLE_PROXYS",
@@ -133,7 +133,7 @@
       "type": "string",
       "default": "",
       "advanced": true,
-      "help": "Ex. https://cachet.exemple. Les liens des courriels d'alerte de sécurité en partent. Obligatoire avec un relais SMTP."
+      "help": "Ex. https://ravyn.exemple. Les liens des courriels d'alerte de sécurité en partent. Obligatoire avec un relais SMTP."
     },
     {
       "key": "SOCLE_SMTP_HOTE",
@@ -141,7 +141,7 @@
       "type": "string",
       "default": "",
       "advanced": true,
-      "help": "Vide : les alertes de sécurité restent visibles dans CACHET, sans courriel."
+      "help": "Vide : les alertes de sécurité restent visibles dans RAVYN, sans courriel."
     },
     {
       "key": "SOCLE_SMTP_PORT",
@@ -189,16 +189,16 @@
       "advanced": true
     },
     {
-      "key": "CACHET_ENVOIS_MINUTE",
+      "key": "RAVYN_ENVOIS_MINUTE",
       "label": "Envois par minute",
       "type": "number",
       "default": 30,
       "min": 1,
       "advanced": true,
-      "help": "Plafond des courriels envoyés par minute, toutes clés confondues : une clé d'envoi volée ne fait pas de CACHET un relais de pourriel."
+      "help": "Plafond des courriels envoyés par minute, toutes clés confondues : une clé d'envoi volée ne fait pas de RAVYN un relais de pourriel."
     },
     {
-      "key": "CACHET_SECRET_V1",
+      "key": "RAVYN_SECRET_V1",
       "label": "CACHET_SECRET de la 1.0",
       "type": "secret",
       "advanced": true,
@@ -359,7 +359,7 @@
   "actions": [
     {
       "id": "summary",
-      "name": "État de CACHET",
+      "name": "État de RAVYN",
       "description": "Tickets ouverts et critiques, messages non lus, boîtes en erreur, dernière relève.",
       "icon": "chart",
       "group": "Tickets",
@@ -814,6 +814,6 @@
   },
   "ai": {
     "exposeActions": true,
-    "hints": "CACHET relève les boîtes d'alertes : chaque alias d'une boîte à tickets désigne un service et une urgence par défaut, les mots-clés ne font que la monter. « État de CACHET » d'abord ; un envoi de courriel part vraiment et passe par une validation humaine. Les boîtes, les règles et les clés se règlent dans CACHET, par une personne."
+    "hints": "RAVYN relève les boîtes d'alertes : chaque alias d'une boîte à tickets désigne un service et une urgence par défaut, les mots-clés ne font que la monter. « État de RAVYN » d'abord ; un envoi de courriel part vraiment et passe par une validation humaine. Les boîtes, les règles et les clés se règlent dans RAVYN, par une personne."
   }
 }

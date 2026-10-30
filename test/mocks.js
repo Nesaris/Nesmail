@@ -1,5 +1,5 @@
 // Serveur IMAP d'essai : TLS implicite, STARTTLS, ou en clair sans STARTTLS
-// (pour vérifier que CACHET n'y envoie rien). Le certificat vient de
+// (pour vérifier que RAVYN n'y envoie rien). Le certificat vient de
 // certificatEssai (openssl, à la volée).
 import net from 'node:net';
 import tls from 'node:tls';

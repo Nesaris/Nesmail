@@ -1,14 +1,14 @@
-# CACHET seul, sans le Hub. Le .env porte les réglages (voir .env.example).
-# Le port n'est ouvert que sur l'adresse de CACHET_BIND (127.0.0.1 par défaut :
+# RAVYN seul, sans le Hub. Le .env porte les réglages (voir .env.example).
+# Le port n'est ouvert que sur l'adresse de RAVYN_BIND (127.0.0.1 par défaut :
 # derrière un relais HTTPS sur la même machine).
 services:
-  cachet:
+  ravyn:
     build: .
-    image: cachet:2.0.0
-    container_name: cachet
+    image: ravyn:2.0.0
+    container_name: ravyn
     restart: unless-stopped
     ports:
-      - "${CACHET_BIND:-127.0.0.1}:${CACHET_PORT:-8787}:8787"
+      - "${RAVYN_BIND:-127.0.0.1}:${RAVYN_PORT:-8787}:8787"
     read_only: true
     tmpfs:
       - /tmp:size=32m,mode=1777
@@ -24,9 +24,9 @@ services:
       SOCLE_PROXYS: ${SOCLE_PROXYS:-}
       SOCLE_URL_PUBLIQUE: ${SOCLE_URL_PUBLIQUE:-}
       SOCLE_THEME: ${SOCLE_THEME:-soma}
-      CACHET_SECRET_V1: ${CACHET_SECRET_V1:-}
+      RAVYN_SECRET_V1: ${RAVYN_SECRET_V1:-}
     volumes:
-      - cachet-data:/data
+      - ravyn-data:/data
     logging:
       driver: json-file
       options: { max-size: "10m", max-file: "5" }
@@ -36,4 +36,4 @@ secrets:
     file: ./secrets/socle_cle
 
 volumes:
-  cachet-data:
+  ravyn-data:

@@ -49,11 +49,11 @@ jobs:
           context: .
           platforms: linux/amd64
           load: true
-          tags: cachet:crible
+          tags: ravyn:crible
       - name: Crible des vulnérabilités de l'image
         uses: anchore/scan-action@27805bf3b4e84b4a5c980df22ed233c00390a439 # v7.4.2
         with:
-          image: cachet:crible
+          image: ravyn:crible
           severity-cutoff: high
           only-fixed: true
           fail-build: true
