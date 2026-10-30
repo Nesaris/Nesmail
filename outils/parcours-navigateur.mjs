@@ -19,7 +19,10 @@ const sortie = process.argv[2] || path.join(os.tmpdir(), 'captures-ravyn');
 fs.mkdirSync(sortie, { recursive: true });
 const MDP = 'phrase de passe pour ravyn en local';
 const JETON = 'jeton-installation-du-parcours-0123456789';
-const SONDE = '<img src=x onerror=window.__xss=1>';
+// PARCOURS_VITRINE=1 : des données de démonstration sans charge hostile, pour
+// les captures de présentation (le contrôle d'échappement ne s'y fait pas).
+const VITRINE = process.env.PARCOURS_VITRINE === '1';
+const SONDE = VITRINE ? 'Sauvegarde' : '<img src=x onerror=window.__xss=1>';
 
 const cert = certificatEssai('localhost');
 tls.setDefaultCACertificates([...tls.getCACertificates('default'), cert.cert]);
@@ -28,7 +31,9 @@ const imap = imapServer([
   makeMessage({ from: 'bot@conteneurs.exemple.fr', to: 'conteneurs@exemple.fr', subject: 'api redémarre en boucle', body: 'Machine : srv01\nCode : 137', encoded: 'multipart' }),
   makeMessage({ from: 'proxy@exemple.fr', to: 'proxy@exemple.fr', subject: 'Certificat renouvelé', body: 'Machine : proxy\nRAS' }),
   // Sonde : du balisage dans chaque champ affiché. Il doit rester du texte.
-  makeMessage({ from: '"<b>Sonde</b>" <sonde@exemple.fr>', to: 'rmm@exemple.fr', subject: SONDE + ' sonde', body: 'Machine : ' + SONDE + '\n<svg onload=window.__xss=1></svg>', encoded: 'multipart' }),
+  VITRINE
+    ? makeMessage({ from: '"Sauvegardes" <sauvegardes@exemple.fr>', to: 'rmm@exemple.fr', subject: 'Sauvegarde de nuit échouée sur nas01 (sonde)', body: 'Machine : nas01\nTâche : sauvegarde-nuit\nErreur : disque cible plein', encoded: 'multipart' })
+    : makeMessage({ from: '"<b>Sonde</b>" <sonde@exemple.fr>', to: 'rmm@exemple.fr', subject: SONDE + ' sonde', body: 'Machine : ' + SONDE + '\n<svg onload=window.__xss=1></svg>', encoded: 'multipart' }),
 ], { mode: 'tls', certificat: cert });
 const portImap = await imap.ecouter();
 
@@ -75,7 +80,7 @@ await page.getByRole('button', { name: 'Créer le compte' }).click();
 await page.getByRole('button', { name: /Créer la clé maintenant/ }).click();
 await page.getByText('J’ai rangé ces codes en lieu sûr.').click();
 await page.getByRole('button', { name: 'Terminer' }).click();
-await passerAssistant(page, { controle });
+await passerAssistant(page, { controle: nom => controle(page, nom) });
 await page.locator('#app:not(.hidden)').waitFor();
 await page.getByRole('heading', { name: 'Arrivée des tickets' }).waitFor();
 
