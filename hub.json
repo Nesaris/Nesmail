@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "ravyn",
   "name": "RAVYN",
-  "version": "2.0.2",
+  "version": "2.1.0",
   "description": "Boîte d'arrivée des alertes : relève les boîtes IMAP, fait de chaque alerte un ticket par service et urgence, répond depuis la bonne adresse.",
   "icon": "mail",
   "repository": "https://github.com/CodexX64/ravyn",
@@ -63,8 +63,8 @@
       "key": "IMAGE_TAG",
       "label": "Version de l'image",
       "type": "string",
-      "default": "2.0.2",
-      "help": "Étiquette de l'image. Absente du registre, le Hub la construit ici depuis le dépôt (tag v2.0.2)."
+      "default": "2.1.0",
+      "help": "Étiquette de l'image. Absente du registre, le Hub la construit ici depuis le dépôt (tag v2.1.0)."
     },
     {
       "key": "HUB_TOKEN",
