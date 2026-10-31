@@ -807,6 +807,22 @@ await t('volume de RAVYN : base et table renommées, ancien .env, en-tête X-Rav
     assert.equal((await fetch(url, { headers: { 'x-nesmail-key': jeton } })).status, 200);
   } finally { await r.arreter(); }
 });
+await t('réglages posés par l\'assistant de RAVYN : repris sous le nouveau nom, pas redemandés', async () => {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'nesmail-reglages-'));
+  fs.writeFileSync(path.join(d, 'reglages.json'), JSON.stringify({ fini: true, version: '2.2.0', vus: { RAVYN_ENVOIS_MINUTE: '2.2.0', SOCLE_THEME: '2.2.0' }, valeurs: { RAVYN_ENVOIS_MINUTE: { clair: '12' }, SOCLE_THEME: { clair: 'console' } } }), { mode: 0o600 });
+  const { reprendreReglages } = await import('../lib/serveur.js');
+  assert.equal(reprendreReglages(d), 2);
+  const lu = JSON.parse(fs.readFileSync(path.join(d, 'reglages.json'), 'utf8'));
+  assert.deepEqual(Object.keys(lu.vus).sort(), ['NESMAIL_ENVOIS_MINUTE', 'SOCLE_THEME']);
+  assert.deepEqual(lu.valeurs.NESMAIL_ENVOIS_MINUTE, { clair: '12' });
+  assert.equal(fs.statSync(path.join(d, 'reglages.json')).mode & 0o777, 0o600);
+  assert.equal(reprendreReglages(d), 0, 'une seule fois');
+  const r = await demarrer({ PORT: '0', HOTE: '127.0.0.1', SOCLE_HTTP: '1', NESMAIL_DATA: d, SOCLE_ARGON2_M: '19456', SOCLE_ARGON2_T: '2', SOCLE_ARGON2_P: '1' }, { log: muet });
+  try {
+    assert.equal(r.cfg.envoisMinute, 12);
+    assert.ok(!r.socle.portail.assistant.enAttente().some(x => x.env === 'NESMAIL_ENVOIS_MINUTE'), 'réglage redemandé');
+  } finally { await r.arreter(); }
+});
 await t('le nouveau nom l\'emporte sur les anciens, RAVYN sur CACHET', async () => {
   const { lireConfigNesmail } = await import('../lib/config.js');
   const c = lireConfigNesmail({ NESMAIL_ENVOIS_MINUTE: '12', RAVYN_ENVOIS_MINUTE: '20', CACHET_ENVOIS_MINUTE: '40' });
