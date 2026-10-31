@@ -1,6 +1,6 @@
-RAVYN — CE QUE LE SERVICE GARDE, ET POURQUOI
+Nesmail — CE QUE LE SERVICE GARDE, ET POURQUOI
 
-RAVYN est installé et exploité par la personne ou l'équipe qui l'héberge :
+Nesmail est installé et exploité par la personne ou l'équipe qui l'héberge :
 c'est elle qui répond de ces données. Ce texte dit ce que le logiciel conserve,
 ce qu'il envoie ailleurs, et comment chacun exerce ses droits.
 
@@ -29,7 +29,7 @@ Courrier relevé
   - pour chaque message des boîtes configurées : expéditeur, destinataires,
     objet, date, texte (20 000 caractères au plus) et mise en forme nettoyée ;
     les images distantes sont retirées, jamais chargées ;
-  - les messages envoyés depuis RAVYN, en copie.
+  - les messages envoyés depuis Nesmail, en copie.
   Finalité : ouvrir et suivre les tickets, répondre depuis la bonne adresse.
   Durée : la rétention réglée (30 jours par défaut) ; un message rattaché à un
   ticket encore ouvert est gardé avec lui ; 2 000 messages au plus.
@@ -47,7 +47,7 @@ Secrets des boîtes et des liaisons
 
 Sauvegardes
   - l'exploitant peut tirer une copie de la base entière, chiffrée pour une clé
-    dont la partie privée ne vit pas sur la machine de RAVYN.
+    dont la partie privée ne vit pas sur la machine de Nesmail.
   Durée : celle que l'exploitant fixe (trente jours conseillés).
 
 2. CE QUI PART AILLEURS
@@ -85,5 +85,5 @@ Sauvegardes
   l'exploitant ; SECURITY.md décrit les mesures en place et le canal de
   signalement d'une faille.
 
-RAVYN n'est pas destiné aux mineurs et ne traite aucune catégorie
+Nesmail n'est pas destiné aux mineurs et ne traite aucune catégorie
 particulière de données.

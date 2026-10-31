@@ -1,6 +1,6 @@
-/* RAVYN sur le socle : les jetons de couleur, les polices et les gammes
+/* Nesmail sur le socle : les jetons de couleur, les polices et les gammes
    (SOMA, Console, Exploitation, Lavande) viennent de /socle/soma.css, chargée
-   avant. Cette feuille dessine les composants propres à RAVYN. */
+   avant. Cette feuille dessine les composants propres à Nesmail. */
 *{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
@@ -378,7 +378,7 @@ tr.sub td{background:var(--well)!important;padding-top:9px;padding-bottom:9px}
 .cale{width:24px;flex:none}
 .marque-porte{width:18px;height:18px;border-radius:5px;display:block}
 
-/* Ce que soma.css dessine autrement, ramené au dessin de RAVYN */
+/* Ce que soma.css dessine autrement, ramené au dessin de Nesmail */
 .stage{flex:none;overflow:visible;min-height:auto;min-width:0}
 .shell>*{min-width:0}
 .page>*+*{margin-top:0}

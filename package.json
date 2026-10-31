@@ -1,5 +1,5 @@
 {
-  "name": "ravyn",
+  "name": "nesmail",
   "version": "2.2.0",
   "description": "Boîte d'arrivée des alertes et suivi des tickets, sans dépendances, sur le socle commun",
   "type": "module",

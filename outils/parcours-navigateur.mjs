@@ -1,4 +1,4 @@
-// Parcours réel de RAVYN dans Chromium : installation du premier compte (clé
+// Parcours réel de Nesmail dans Chromium : installation du premier compte (clé
 // d'accès virtuelle), une boîte à tickets relevée sur un serveur IMAP d'essai,
 // puis chaque écran dans chaque gamme (SOMA, Console, Exploitation, Lavande),
 // clair et sombre, avec le contrôle de mise en page du socle à chaque largeur.
@@ -15,9 +15,9 @@ import { imapServer, makeMessage } from '../test/mocks.js';
 import { demarrer } from '../lib/serveur.js';
 
 const { chromium } = await import(process.env.PLAYWRIGHT || 'playwright');
-const sortie = process.argv[2] || path.join(os.tmpdir(), 'captures-ravyn');
+const sortie = process.argv[2] || path.join(os.tmpdir(), 'captures-nesmail');
 fs.mkdirSync(sortie, { recursive: true });
-const MDP = 'phrase de passe pour ravyn en local';
+const MDP = 'phrase de passe pour nesmail en local';
 const JETON = 'jeton-installation-du-parcours-0123456789';
 // PARCOURS_VITRINE=1 : des données de démonstration sans charge hostile, pour
 // les captures de présentation (le contrôle d'échappement ne s'y fait pas).
@@ -37,9 +37,9 @@ const imap = imapServer([
 ], { mode: 'tls', certificat: cert });
 const portImap = await imap.ecouter();
 
-const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'ravyn-parcours-'));
+const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'nesmail-parcours-'));
 const muet = { info() {}, warn() {}, error: (...a) => console.error(...a) };
-const env = gamme => ({ RAVYN_DATA: dossier, PORT: '0', HOTE: '127.0.0.1', SOCLE_JETON_INSTALLATION: JETON, SOCLE_THEME: gamme, SOCLE_ARGON2_M: '19456', SOCLE_ARGON2_T: '2', SOCLE_ARGON2_P: '1' });
+const env = gamme => ({ NESMAIL_DATA: dossier, PORT: '0', HOTE: '127.0.0.1', SOCLE_JETON_INSTALLATION: JETON, SOCLE_THEME: gamme, SOCLE_ARGON2_M: '19456', SOCLE_ARGON2_T: '2', SOCLE_ARGON2_P: '1' });
 
 const navigateur = await chromium.launch();
 const rapport = [];
