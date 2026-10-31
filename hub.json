@@ -3,7 +3,7 @@
   "manifestVersion": 1,
   "id": "nesmail",
   "name": "Nesmail",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "Boîte d'arrivée des alertes : relève les boîtes IMAP, fait de chaque alerte un ticket par service et urgence, répond depuis la bonne adresse.",
   "icon": "mail",
   "repository": "https://github.com/Nesaris/Nesmail",
@@ -70,8 +70,8 @@
       "key": "IMAGE_TAG",
       "label": "Version de l'image",
       "type": "string",
-      "default": "2.2.0",
-      "help": "Étiquette de l'image. Absente du registre, le Hub la construit ici depuis le dépôt (tag v2.2.0)."
+      "default": "2.3.0",
+      "help": "Étiquette de l'image. Absente du registre, le Hub la construit ici depuis le dépôt (tag v2.3.0)."
     },
     {
       "key": "HUB_TOKEN",
