@@ -11,6 +11,13 @@
   "minHubVersion": "0.14.0",
   "replaces": [
     {
+      "id": "ravyn",
+      "config": {
+        "RAVYN_ENVOIS_MINUTE": "NESMAIL_ENVOIS_MINUTE",
+        "RAVYN_SECRET_V1": "NESMAIL_SECRET_V1"
+      }
+    },
+    {
       "id": "cachet",
       "config": {
         "CACHET_ENVOIS_MINUTE": "NESMAIL_ENVOIS_MINUTE",
