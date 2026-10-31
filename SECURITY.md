@@ -1,4 +1,4 @@
-# Security compliance — RAVYN (ex-CACHET)
+# Security compliance — Nesmail (ex-RAVYN, ex-CACHET)
 
 Standard: Project Baseline Requirements & Security Manual, Edition 2.0 (258 controls)
 Audited: 2026-10-23   ·   Owner: Codex64   ·   Status: NON-COMPLIANT

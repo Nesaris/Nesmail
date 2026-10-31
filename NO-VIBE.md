@@ -1,4 +1,4 @@
-# Code quality record — RAVYN (ex-CACHET)
+# Code quality record — Nesmail (ex-RAVYN, ex-CACHET)
 
 Method: Project Baseline Requirements & Security Manual, Part III (chapters 37-49)
 Reviewed: 2026-10-23   ·   Owner: Codex64
