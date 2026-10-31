@@ -1,5 +1,13 @@
 [
   {
+    "version": "2.3.0",
+    "date": "2026-10-31",
+    "points": [
+      "RAVYN devient Nesmail : nouveau nom, mêmes boîtes, règles, tickets et réglages, repris tels quels.",
+      "Les services qui appellent l’API avec l’en-tête X-Ravyn-Key continuent de fonctionner ; X-Nesmail-Key est le nouveau nom."
+    ]
+  },
+  {
     "version": "2.2.0",
     "date": "2026-10-30",
     "points": [
