@@ -1,8 +1,8 @@
 <p align="center"><img src="medias/icone.svg" alt="" width="72" height="72"></p>
 
-<p align="center"><img src="medias/affiche.png" alt="Affiche de RAVYN" width="100%"></p>
+<p align="center"><img src="medias/affiche.png" alt="Affiche de Nesmail" width="100%"></p>
 
-# Ravyn
+# Nesmail
 
 Boîte d'arrivée des alertes et suivi des tickets. Relève une ou plusieurs boîtes
 IMAP, transforme chaque alerte en ticket structuré (service, machine, urgence),
@@ -59,14 +59,14 @@ second.
 
 ## Installation par le Hub
 
-RAVYN est une extension du Hub : **Extensions → RAVYN → Installer**. Le Hub
+Nesmail est une extension du Hub : **Extensions → Nesmail → Installer**. Le Hub
 crée la clé maîtresse, le jeton de service et le jeton d'administration des
 comptes, les garde dans son coffre, et construit l'image depuis ce dépôt si elle
 n'est pas publiée. Le premier compte se crée depuis **Comptes des services**.
 
 L'apparence suit la page **Thème** du Hub : SOMA, Console, Exploitation ou
-Lavande, pour tous les services ou pour RAVYN seul. Clair ou sombre se règle
-dans RAVYN, avec le bouton de l'en-tête.
+Lavande, pour tous les services ou pour Nesmail seul. Clair ou sombre se règle
+dans Nesmail, avec le bouton de l'en-tête.
 
 ## Installation seule
 
@@ -74,10 +74,10 @@ dans RAVYN, avec le bouton de l'en-tête.
 mkdir -p secrets && openssl rand -base64 32 > secrets/socle_cle && chmod 600 secrets/socle_cle
 cp .env.example .env
 docker compose up -d --build
-docker compose logs ravyn | grep "Jeton d'installation"
+docker compose logs nesmail | grep "Jeton d'installation"
 ```
 
-Puis l'adresse de RAVYN, servie en HTTPS par un relais (Caddy, Traefik,
+Puis l'adresse de Nesmail, servie en HTTPS par un relais (Caddy, Traefik,
 Relay…), le jeton d'installation, et le premier compte : identifiant, mot de
 passe, clé d'accès, codes de secours. Les comptes suivants s'invitent depuis
 **Comptes**.
@@ -99,10 +99,10 @@ d'authentification pour l'administrateur).
 | `SOCLE_PROXYS` | relais autorisés à transmettre l'adresse du client (CIDR). |
 | `SOCLE_URL_PUBLIQUE`, `SOCLE_SMTP_*` | alertes de sécurité des comptes par courriel. |
 | `SOCLE_THEME` | `soma`, `console`, `exploitation` ou `lavande`. |
-| `RAVYN_HUB_TOKEN` | jeton de service du Hub. |
-| `RAVYN_ENVOIS_MINUTE` | envois par minute, toutes clés confondues (30). |
-| `RAVYN_SECRET_V1` | reprise d'une 1.0 seulement (voir plus bas). |
-| `RAVYN_DATA`, `PORT` | dossier des données (`/data`) et port interne (8787). |
+| `NESMAIL_HUB_TOKEN` | jeton de service du Hub. |
+| `NESMAIL_ENVOIS_MINUTE` | envois par minute, toutes clés confondues (30). |
+| `NESMAIL_SECRET_V1` | reprise d'une 1.0 seulement (voir plus bas). |
+| `NESMAIL_DATA`, `PORT` | dossier des données (`/data`) et port interne (8787). |
 
 ---
 
@@ -111,8 +111,8 @@ d'authentification pour l'administrateur).
 Au premier démarrage, ouvre l’interface : tu crées le compte administrateur avec
 le jeton d’installation (affiché dans les journaux du conteneur, ou transmis par
 le Hub), tu inscris tes facteurs de connexion, puis l’**assistant de
-configuration** passe les réglages de RAVYN groupe par groupe. Il est
-obligatoire : RAVYN reste fermé tant qu’il n’est pas terminé. Chaque valeur
+configuration** passe les réglages de Nesmail groupe par groupe. Il est
+obligatoire : Nesmail reste fermé tant qu’il n’est pas terminé. Chaque valeur
 proposée convient pour commencer.
 
 <p align="center"><img src="medias/assistant.png" alt="Assistant de configuration" width="70%"></p>
@@ -128,7 +128,7 @@ résume ce qu’elle apporte, une fois par compte, et se ferme d’un clic
 (`nouveautes.json`).
 
 Tout reste modifiable dans **Comptes → Réglages du service**. Une variable
-posée dans l’environnement l’emporte toujours et n’est pas demandée. RAVYN
+posée dans l’environnement l’emporte toujours et n’est pas demandée. Nesmail
 redémarre seul pour appliquer un changement (le processus du conteneur le
 supervise). Les valeurs vivent dans `reglages.json`, dans le volume de
 données ; les secrets y sont scellés par la clé maîtresse.
@@ -192,20 +192,20 @@ récente de son identité.
 - **la clé d'envoi** (`sk_…`) n'ouvre que `POST /api/send`.
 
 Aucune clé n'existe tant qu'un administrateur ne l'a pas créée. Une clé se voit
-**une fois**, à sa création : RAVYN n'en garde que l'empreinte. Perdue, elle se
+**une fois**, à sa création : Nesmail n'en garde que l'empreinte. Perdue, elle se
 régénère (l'ancienne cesse aussitôt). Aucune clé n'ouvre les boîtes, les règles,
-les réglages ni les clés : cela demande une personne connectée. Les deux s'envoient en en-tête `X-Ravyn-Key`
+les réglages ni les clés : cela demande une personne connectée. Les deux s'envoient en en-tête `X-Nesmail-Key`
 ou en `Authorization: Bearer`. Le jeton de service du Hub vaut la clé complète.
 
-Les **origines autorisées** ne servent que si un front appelle RAVYN depuis le
+Les **origines autorisées** ne servent que si un front appelle Nesmail depuis le
 navigateur, avec une clé (jamais avec une session) ; `*` est refusé.
 
 ### Webhook sortant
 
 ```
 POST <votre url>
-X-Ravyn-Key: <clé>                    (nom de l'en-tête réglable)
-X-Ravyn-Signature: sha256=<hmac du corps>
+X-Nesmail-Key: <clé>                    (nom de l'en-tête réglable)
+X-Nesmail-Signature: sha256=<hmac du corps>
 
 { "event": "ticket.created", "ticket": { … }, "at": "…" }
 ```
@@ -232,11 +232,11 @@ redirections jamais suivies.
 propre préfixe (`/api/monservice/tickets`) : la route équivalente répond, avec
 les mêmes droits.
 
-## Faire envoyer vos services vers RAVYN
+## Faire envoyer vos services vers Nesmail
 
 ```
-POST https://ravyn.exemple.fr/api/send
-X-Ravyn-Key: sk_...
+POST https://nesmail.exemple.fr/api/send
+X-Nesmail-Key: sk_...
 
 { "from": "no-reply@exemple.fr", "to": "supervision@exemple.fr",
   "subject": "résumé court et stable du problème",
@@ -252,41 +252,45 @@ X-Ravyn-Key: sk_...
 
 ---
 
-## L'ancien nom : CACHET
+## Les anciens noms : RAVYN, CACHET
 
-RAVYN s'appelait CACHET. Rien n'est perdu au changement de nom :
+Nesmail s'est appelé CACHET, puis RAVYN. Rien n'est perdu au changement de nom :
 
-- **par le Hub** : le catalogue propose RAVYN en mise à jour du CACHET installé ;
-  le Hub copie le volume sous le nouveau nom, garde les réglages
-  (`CACHET_ENVOIS_MINUTE` devient `RAVYN_ENVOIS_MINUTE`) et suit les routes ;
-- **le volume** : `cachet.db` devient `ravyn.db` au premier démarrage, journaux
-  compris, et sa table est renommée ; les secrets déjà scellés (mots de passe
-  des boîtes, clés du webhook et de Telegram) s'ouvrent comme avant ;
-- **un ancien `.env`** : chaque `CACHET_*` vaut encore pour le `RAVYN_*` du même
-  nom, tant que celui-ci n'est pas posé ;
-- **les services qui appellent l'API** : l'en-tête `X-Cachet-Key` est encore
-  accepté, à côté de `X-Ravyn-Key` ;
-- **les récepteurs du webhook** : la signature part sous `X-Ravyn-Signature` et
-  sous `X-Cachet-Signature` ; un en-tête de clé réglé du temps de CACHET est
-  gardé tel quel ;
-- **une sauvegarde de CACHET** se restaure avec `node lib/cli.js restaurer`.
+- **par le Hub** : le catalogue propose Nesmail en mise à jour du RAVYN (ou du
+  CACHET) installé ; le Hub copie le volume sous le nouveau nom, garde les
+  réglages (`RAVYN_ENVOIS_MINUTE` devient `NESMAIL_ENVOIS_MINUTE`) et suit les
+  routes ;
+- **le volume** : `ravyn.db` (ou `cachet.db`) devient `nesmail.db` au premier
+  démarrage, journaux compris, et sa table est renommée ; les secrets déjà
+  scellés (mots de passe des boîtes, clés du webhook et de Telegram) s'ouvrent
+  comme avant ;
+- **un ancien `.env`** : chaque `RAVYN_*` ou `CACHET_*` vaut encore pour le
+  `NESMAIL_*` du même nom, tant que celui-ci n'est pas posé (`RAVYN_*` passe
+  avant `CACHET_*`) ;
+- **les services qui appellent l'API** : les en-têtes `X-Ravyn-Key` et
+  `X-Cachet-Key` sont encore acceptés, à côté de `X-Nesmail-Key` ;
+- **les récepteurs du webhook** : la signature part sous `X-Nesmail-Signature`,
+  `X-Ravyn-Signature` et `X-Cachet-Signature` ; un en-tête de clé déjà réglé
+  est gardé tel quel ;
+- **une sauvegarde de RAVYN ou de CACHET** se restaure avec
+  `node lib/cli.js restaurer`.
 
 Les sessions ouvertes se referment une fois (le cookie porte le nom du
 service) : on se reconnecte. Installé seul avec `docker compose`, le volume
-s'appelle maintenant `ravyn-data` : copiez l'ancien avant le premier démarrage,
-`docker run --rm -v <projet>_cachet-data:/de -v <projet>_ravyn-data:/vers busybox cp -a /de/. /vers/`.
+s'appelle maintenant `nesmail-data` : copiez l'ancien avant le premier démarrage,
+`docker run --rm -v <projet>_ravyn-data:/de -v <projet>_nesmail-data:/vers busybox cp -a /de/. /vers/`.
 
 ## Reprendre une 1.0
 
 Arrêtez la 1.0, gardez son volume, et démarrez la 2.0 sur ce volume avec
-`RAVYN_SECRET_V1` = l'ancien `CACHET_SECRET` (dans le Hub : réglages avancés,
-« CACHET_SECRET de la 1.0 »). Au premier démarrage, RAVYN reprend les boîtes,
+`NESMAIL_SECRET_V1` = l'ancien `CACHET_SECRET` (dans le Hub : réglages avancés,
+« CACHET_SECRET de la 1.0 »). Au premier démarrage, Nesmail reprend les boîtes,
 les alias, les dossiers, les règles, les réglages, le courrier et les tickets ;
 les mots de passe des boîtes sont rescellés sous la clé maîtresse, et les clés
 d'API restent valables (vos services gardent l'accès) mais ne sont plus gardées
 que par leur empreinte. `config.json` et
 `state.json` sont renommés en `*.v1-reprise-<date>` : supprimez-les une fois la
-reprise vérifiée, puis videz `RAVYN_SECRET_V1`.
+reprise vérifiée, puis videz `NESMAIL_SECRET_V1`.
 
 Ce qui change :
 
@@ -302,18 +306,18 @@ Ce qui change :
 ## Sauvegarde
 
 ```bash
-docker exec -i ravyn node lib/cli.js sauvegarde < sauvegarde.pub > ravyn.sauv
-node lib/cli.js restaurer sauvegarde.pem ravyn.db < ravyn.sauv   # ailleurs
+docker exec -i nesmail node lib/cli.js sauvegarde < sauvegarde.pub > nesmail.sauv
+node lib/cli.js restaurer sauvegarde.pem nesmail.db < nesmail.sauv   # ailleurs
 ```
 
-Tout est dans `ravyn.db` (volume `/data`) : comptes, boîtes, règles, courrier,
+Tout est dans `nesmail.db` (volume `/data`) : comptes, boîtes, règles, courrier,
 tickets, journal. La sauvegarde est chiffrée pour une clé publique RSA dont la
 clé privée ne vit pas sur la machine ; elle garde les secrets scellés sous la
 clé maîtresse, à sauvegarder à part.
 
 ## Tourner la clé maîtresse
 
-Dans le Hub, réglages avancés de RAVYN : la clé actuelle dans « Clé maîtresse
+Dans le Hub, réglages avancés de Nesmail : la clé actuelle dans « Clé maîtresse
 remplacée », une neuve (`openssl rand -base64 32`) dans « Clé maîtresse »,
 redéployer. Au démarrage, les mots de passe des boîtes, les secrets du webhook
 et de Telegram et les secrets TOTP sont rescellés sous la neuve (journal :
@@ -335,18 +339,18 @@ webhook signé ; purge à la rétention.
 
 Pas fait, volontairement : OAuth2 (mot de passe d'application), pièces jointes
 (le corps seul est extrait), plusieurs dossiers IMAP par boîte, dossiers côté
-serveur (les dossiers sont locaux à RAVYN).
+serveur (les dossiers sont locaux à Nesmail).
 
 ## Le premier message ne remonte pas ?
 
-À la toute première relève, RAVYN ne prend que les messages **non lus**, pour
+À la toute première relève, Nesmail ne prend que les messages **non lus**, pour
 ne pas rejouer tout l'historique. **Relever depuis zéro** (clic droit sur la
 ligne de la boîte) reprend les vingt derniers.
 
 ## Essais
 
 ```bash
-node test/run.js                       # RAVYN (faux serveurs IMAP et SMTP, TLS réel)
+node test/run.js                       # Nesmail (faux serveurs IMAP et SMTP, TLS réel)
 node --test socle/test/                # le socle embarqué
 node outils/parcours-navigateur.mjs    # chaque écran, chaque gamme, chaque largeur (Playwright)
 ```
