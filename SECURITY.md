@@ -581,3 +581,13 @@ Le changement de nom ne change aucun contrôle de statut. Ce qui est repris des 
 - identifiant du service dans le socle : `nesmail` ; cookies renommés, les sessions ouvertes se referment une fois ; contact de sécurité sur le dépôt `Nesaris/Nesmail` (`lib/serveur.js:22`) ; image `ghcr.io/nesaris/nesmail`.
 
 Essais : 90 du service, dont la reprise d'un volume de RAVYN et de CACHET (base et table renommées, ancien `.env`, anciens en-têtes, secret de boîte lisible), la reprise des réglages de l'assistant et la triple signature, et 91 en tout avec le socle. Banc à part : volume créé par le vrai RAVYN 2.2.0 (boîte, secret de webhook), ouvert par Nesmail avec l'ancien `.env` : base et table renommées, mot de passe de la boîte et secret du webhook relus, en-tête réglé gardé, `X-Ravyn-Key` et `X-Nesmail-Key` acceptés. Manifeste validé contre le schéma du Hub (`replaces` : ravyn, cachet). Parcours du navigateur : 539 contrôles, 0 défaut, 0 erreur de console.
+
+## Suivi du 2026-11-01 (2.3.1) : image et vérification sous l'organisation Nesaris
+
+Aucun contrôle ne change de statut ; aucun changement de comportement du service.
+
+- image de base Node 24.22.1, épinglée par empreinte : la 24.21.0 portait une faille critique exploitée (CVE-2026-111497) et plusieurs failles hautes ; paquets du système mis à jour à la construction ; npm, npx, corepack et yarn retirés des étapes d'exécution (aucune dépendance npm à l'exécution) ;
+- vérification continue : gitleaks 8.30.1 en ligne de commande, archive contrôlée par son empreinte SHA-256, sur tout l'historique (l'action exigeait une licence sur un dépôt d'organisation) ; heure UTC acceptée sous ses deux écritures par git (« +00:00 » et « Z ») ; termes d'anonymat possibles en mot entier (« ~ ») ; liste d'anonymat posée au niveau de l'organisation Nesaris ; essais sous Node 24.22.1 ;
+- images publiées sous ghcr.io/nesaris.
+
+Contrôles rejoués avant livraison : gitleaks sur tout l'historique (aucune fuite), identité et fuseau des nouveaux commits (CodexX64, UTC, aucune mention d'outil), liste d'anonymat sur l'arbre et les nouveaux commits (aucune correspondance).
