@@ -1,6 +1,6 @@
 {
   "name": "nesmail",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "Boîte d'arrivée des alertes et suivi des tickets, sans dépendances, sur le socle commun",
   "type": "module",
   "main": "server.js",
