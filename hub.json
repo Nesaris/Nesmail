@@ -8,7 +8,7 @@
   "icon": "mail",
   "repository": "https://github.com/Nesaris/Nesmail",
   "license": "MIT",
-  "minHubVersion": "0.14.0",
+  "minHubVersion": "0.17.0",
   "replaces": [
     {
       "id": "ravyn",

@@ -45,6 +45,7 @@ services:
       SOCLE_ORIGINES: "{{config.SOCLE_ORIGINES}}"
       # Apparence choisie dans la page Thème du Hub : toutes les gammes, Lavande comprise.
       SOCLE_THEME: "{{hub.apparence}}"
+      SOCLE_DISPOSITION: "{{hub.disposition}}"
       # Alertes de sécurité par courriel, si un relais est indiqué.
       SOCLE_URL_PUBLIQUE: "{{config.SOCLE_URL_PUBLIQUE}}"
       SOCLE_SMTP_HOTE: "{{config.SOCLE_SMTP_HOTE}}"

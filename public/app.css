@@ -483,3 +483,42 @@ html[data-gamme="lavande"] .prov.on{border-color:var(--accent)}
 @container lecteur (max-width:440px){.depuis{display:none}}
 @media(max-width:520px){.provs{grid-template-columns:1fr}}
 .tw{overflow-x:auto}
+
+/* Position du menu : à gauche (d'origine), à droite, ou en barre en haut ou
+   en bas, comme la barre des petits écrans. La valeur vient du Hub
+   (SOCLE_DISPOSITION) ou du choix de chacun (socle/disposition.js). */
+html[data-disposition="droite"] .shell{grid-template-columns:minmax(0,1fr) 234px}
+html[data-disposition="droite"] .side{order:2;padding:26px 22px 24px 16px}
+html[data-gamme="console"][data-disposition="droite"] .side{border-right:0;border-left:1px solid var(--hair)}
+html[data-gamme="lavande"][data-disposition="droite"] .shell{grid-template-columns:minmax(0,1fr) 248px}
+html[data-gamme="lavande"][data-disposition="droite"] .side{margin:14px 14px 14px 0;padding:24px 14px 18px}
+html[data-gamme="lavande"][data-disposition="droite"] .nav-item.on::before{left:auto;right:-14px;border-radius:4px 0 0 4px}
+html:is([data-disposition="haut"],[data-disposition="bas"]) .shell,html[data-gamme="lavande"]:is([data-disposition="haut"],[data-disposition="bas"]) .shell{grid-template-columns:minmax(0,1fr)}
+html[data-disposition="haut"] .shell{grid-template-rows:auto 1fr;align-content:start}
+html[data-disposition="bas"] .shell{grid-template-rows:1fr auto}
+html:is([data-disposition="haut"],[data-disposition="bas"]) .side{position:sticky;top:0;z-index:50;height:auto;flex-direction:row;align-items:center;gap:4px;overflow-x:auto;overflow-y:hidden;padding:10px 18px;background:var(--paper);scrollbar-width:none}
+html:is([data-disposition="haut"],[data-disposition="bas"]) .side::-webkit-scrollbar{display:none}
+html:is([data-disposition="haut"],[data-disposition="bas"]) .side .mark{flex:none;margin:0 10px 0 0;padding:0 4px}
+html:is([data-disposition="haut"],[data-disposition="bas"]) :is(.set,#folderNav){display:contents}
+html:is([data-disposition="haut"],[data-disposition="bas"]) .set>span{display:none}
+html:is([data-disposition="haut"],[data-disposition="bas"]) .nav-item{width:auto;flex:none;white-space:nowrap}
+html:is([data-disposition="haut"],[data-disposition="bas"]) .side .railcard{display:none}
+html:is([data-disposition="haut"],[data-disposition="bas"]) #folderNav>*{flex:none;white-space:nowrap}
+html[data-disposition="bas"] .side{order:2;top:auto;bottom:0;padding-bottom:max(10px,env(safe-area-inset-bottom,0px))}
+html[data-gamme="console"][data-disposition="haut"] .side{border-right:0;border-bottom:1px solid var(--hair)}
+html[data-gamme="console"][data-disposition="bas"] .side{border-right:0;border-top:1px solid var(--hair)}
+html[data-gamme="lavande"]:is([data-disposition="haut"],[data-disposition="bas"]) .side{background:var(--l-rail);border-radius:26px;height:auto;padding:10px 12px 10px 18px;box-shadow:var(--lift-hi)}
+html[data-gamme="lavande"][data-disposition="haut"] .side{margin:14px 14px 0;top:14px}
+html[data-gamme="lavande"][data-disposition="bas"] .side{margin:0 14px 14px;bottom:14px}
+html[data-gamme="lavande"][data-disposition="haut"] .nav-item.on::before{left:50%;top:auto;bottom:-10px;width:22px;height:4px;margin:0 0 0 -11px;border-radius:4px 4px 0 0}
+html[data-gamme="lavande"][data-disposition="bas"] .nav-item.on::before{left:50%;top:-10px;width:22px;height:4px;margin:0 0 0 -11px;border-radius:0 0 4px 4px}
+@media(max-width:800px){
+  /* Petit écran : la barre d'origine en haut ; « à droite » y revient, « en bas » la pose en bas. */
+  html[data-disposition="droite"] .shell,html[data-gamme="lavande"][data-disposition="droite"] .shell{grid-template-columns:minmax(0,1fr)}
+  html[data-disposition="droite"] .side{order:0;padding:10px 12px}
+  html[data-gamme="lavande"][data-disposition="droite"] .side{margin:0}
+  html[data-gamme="lavande"]:is([data-disposition="haut"],[data-disposition="bas"]) .side{padding:8px 10px;border-radius:22px}
+  html[data-gamme="lavande"][data-disposition="haut"] .side{margin:10px 10px 0;top:10px}
+  html[data-gamme="lavande"][data-disposition="bas"] .side{margin:0 10px 10px;bottom:10px}
+  html:is([data-disposition="haut"],[data-disposition="bas"]) .side .mark b,html:is([data-disposition="haut"],[data-disposition="bas"]) .side .mark .pulse{display:none}
+}

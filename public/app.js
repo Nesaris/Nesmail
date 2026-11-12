@@ -8,6 +8,7 @@ import { Api, porte, pageSecurite, pageComptes, appliquerTheme, estSombre, confi
 // littérales du code seules sont lues comme du HTML, chaque valeur devient un
 // nœud texte ou un attribut. Aucune affectation d'innerHTML.
 import { html, poser } from '/socle/gabarit.js';
+import { installerDisposition, boutonDisposition } from '/socle/disposition.js';
 
 const URG = { basse: 'Basse', normale: 'Normale', haute: 'Haute', crit: 'Critique' };
 const STATUS = { nouveau: 'Nouveau', cours: 'En cours', traite: 'Traité' };
@@ -150,6 +151,10 @@ $('navSent').onclick = () => {
   aller('mail', $('navSent'));
   renderMailPage();
 };
+// Le menu à gauche, en haut, en bas ou à droite : réglé dans le Hub, ou par
+// chacun (bouton à côté de clair ou sombre, appui long sur le menu).
+installerDisposition({ rail: document.querySelector('aside.side'), bouton: false });
+$('mode').after(boutonDisposition());
 // Clair ou sombre : le même choix que la porte et les autres services du socle.
 $('mode').addEventListener('click', () => {
   document.documentElement.dataset.theme = estSombre() ? 'light' : 'dark';

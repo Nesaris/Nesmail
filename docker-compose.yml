@@ -24,6 +24,7 @@ services:
       SOCLE_PROXYS: ${SOCLE_PROXYS:-}
       SOCLE_URL_PUBLIQUE: ${SOCLE_URL_PUBLIQUE:-}
       SOCLE_THEME: ${SOCLE_THEME:-soma}
+      SOCLE_DISPOSITION: ${SOCLE_DISPOSITION:-gauche}
       NESMAIL_SECRET_V1: ${NESMAIL_SECRET_V1:-}
     volumes:
       - nesmail-data:/data

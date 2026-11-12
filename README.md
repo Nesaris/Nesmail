@@ -99,6 +99,7 @@ d'authentification pour l'administrateur).
 | `SOCLE_PROXYS` | relais autorisés à transmettre l'adresse du client (CIDR). |
 | `SOCLE_URL_PUBLIQUE`, `SOCLE_SMTP_*` | alertes de sécurité des comptes par courriel. |
 | `SOCLE_THEME` | `soma`, `console`, `exploitation` ou `lavande`. |
+| `SOCLE_DISPOSITION` | Position du menu : `gauche`, `haut`, `bas` ou `droite` (posée par le Hub). Chacun peut en choisir une autre dans l'interface. |
 | `NESMAIL_HUB_TOKEN` | jeton de service du Hub. |
 | `NESMAIL_ENVOIS_MINUTE` | envois par minute, toutes clés confondues (30). |
 | `NESMAIL_SECRET_V1` | reprise d'une 1.0 seulement (voir plus bas). |
