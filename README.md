@@ -17,7 +17,7 @@
 
 </p>
 
-<p align="center"><a href="README.fr.md">🇫🇷 Documentation complète en français</a> · <a href="https://nesaris.github.io">Nesaris Network</a></p>
+<p align="center"><a href="README.fr.md">Full documentation</a> · <a href="https://nesaris.github.io">Nesaris Network</a></p>
 
 ## Why Nesmail?
 
@@ -51,7 +51,7 @@ docker compose logs nesmail | grep "Jeton d'installation"   # one-time setup tok
 
 Serve it over HTTPS behind a reverse proxy, paste the setup token and create the first account.
 
-Full documentation (configuration, backups, key rotation, reverse proxy, upgrades) is in **[README.fr.md](README.fr.md)** (French).
+Full documentation (configuration, backups, key rotation, reverse proxy, upgrades) is in **[README.fr.md](README.fr.md)**.
 
 ## Part of Nesaris Network
 
