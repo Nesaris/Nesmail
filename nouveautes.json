@@ -1,5 +1,12 @@
 [
   {
+    "version": "2.4.2",
+    "date": "2026-11-24",
+    "points": [
+      "Correctif de sécurité : l’image passe à Node 24.22.3 (failles hautes de la 24.22.1 corrigées)."
+    ]
+  },
+  {
     "version": "2.4.1",
     "date": "2026-11-24",
     "points": [
