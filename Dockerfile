@@ -3,7 +3,7 @@
 # sont dans le moteur). L'image de base est épinglée par empreinte (index
 # multi-architecture amd64 + arm64) : une étiquette peut être déplacée, une
 # empreinte non.
-ARG NODE_IMAGE=node:24.22.3-bookworm-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54
+ARG NODE_IMAGE=node:24.22.3-bookworm-slim@sha256:873f586f3794f52281bd039bf02c048a0be08fde619338f9941bad1eb6b34530
 
 FROM ${NODE_IMAGE}
 # Paquets du système à jour, et pas de npm, npx, corepack ni yarn : le service
